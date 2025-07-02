@@ -34,7 +34,7 @@ jobs:
   test:
     defaults:
       run:
-        working-directory: ./l2-contracts
+        working-directory: ./
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -64,7 +64,7 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: ./l2-contracts
+        working-directory: ./
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
