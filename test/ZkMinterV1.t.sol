@@ -3,7 +3,7 @@ pragma solidity 0.8.24;
 
 import {ZkMinterRateLimiterV1} from "src/ZkMinterRateLimiterV1.sol";
 import {ZkMinterV1} from "src/ZkMinterV1.sol";
-import {ZkCappedMinterV2Test} from "lib/zk-governance/l2-contracts/test/ZkCappedMinterV2.t.sol";
+import {ZkCappedMinterV2Test} from "test/helpers/ZkCappedMinterV2.t.sol";
 import {IMintable} from "src/interfaces/IMintable.sol";
 
 contract ZkMinterV1Test is ZkCappedMinterV2Test {

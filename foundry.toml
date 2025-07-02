@@ -1,13 +1,15 @@
 [profile.default]
   evm_version = "paris"
   fs_permissions = [{ access = "read", path = "./zkout" }]
-  libs = ["lib"]
-  out = "out"
+  fuzz = { runs = 50 }
+  optimizer = true
+  optimizer_runs = 10_000_000
   remappings = [
     "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
     "@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/",
   ]
-  src = "src"
+  solc_version = "0.8.24"
+  verbosity = 3
 
 [fmt]
   bracket_spacing = false
