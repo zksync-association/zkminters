@@ -21,7 +21,7 @@ jobs:
           submodules: recursive
 
       - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
+        uses: dutterbutter/foundry-zksync-toolchain@v1
 
       - name: Show Forge version
         run: |
