@@ -4,6 +4,7 @@ import "@matterlabs/hardhat-zksync-deploy";
 import "@matterlabs/hardhat-zksync-solc";
 import "@matterlabs/hardhat-zksync-node";
 import "@matterlabs/hardhat-zksync-upgradable";
+import "@matterlabs/hardhat-zksync-verify";
 
 import * as dotenv from "dotenv";
 dotenv.config();
@@ -19,7 +20,7 @@ const config: HardhatUserConfig = {
     },
   },
   paths: {
-    sources: "./src",
+    sources: "src",
   },
   networks: {
     hardhat: {
@@ -31,7 +32,7 @@ const config: HardhatUserConfig = {
     },
     zkSyncLocal: {
       zksync: true,
-      ethNetwork: "ethNetwork",
+      ethNetwork: "sepolia",
       url: process.env.ZK_LOCAL_NETWORK_URL
         ? process.env.ZK_LOCAL_NETWORK_URL
         : "http://0.0.0.0:8011",
@@ -44,6 +45,7 @@ const config: HardhatUserConfig = {
       zksync: true,
       ethNetwork: "mainnet",
       url: "https://zksync-mainnet.g.alchemy.com/v2/SECRET",
+      verifyURL: 'https://zksync2-mainnet-explorer.zksync.io/contract_verification',
     },
     zkSyncTestnet: {
       zksync: true,
