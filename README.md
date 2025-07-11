@@ -1,13 +1,18 @@
 # Minter Mods
 
-Minter mods are composable contracts that can plug into tokens to enforce custom mint rules without touching the core token logic. Some examples of custom mint rules include access control based on ERC-1155 ownership, daily or periodic rate limits, and capping the total mint amount.
+Minter mods are composable contracts that can plug into tokens to enforce custom minting rules without touching the core token logic. Some examples of custom mint rules include access control based on ERC-1155 ownership, daily or periodic rate limits, and capping the total mint amount. These different rules can be composed together to create treasuryless and autonomous token programs.
+
+### Existing Minter mods
+
+- [Rate limiter minter](https://github.com/zksync-association/zkminters/blob/3362afb2b5ae1c4bbfc59ad3976a6a5d5e0d4fd1/src/ZkMinterRateLimiterV1.sol): Limits the rate at which tokens can be minted over a period of time.
+- [Capped minter](https://github.com/zksync-association/zk-governance/blob/master/l2-contracts/src/ZkCappedMinterV2.sol): A legacy minter that puts an upper limit on the amount of tokens that can be minted.
 
 
 ## Composability & Extensibility
 
-_Note: The Capped Minter is a special layer that sits directly in front of the core token to enforce your hard total-supply ceiling. All other mods chain on top of it._
+A typical minter mod chain will start with a capped minter in order to limit the number of tokens a chain can mint. Other minter mods can be chained on top of the rate limiter.
 
-ZkMinter extensions are designed to be chain multiple mods on the same token or even on top of each other to enforce sequential rules. For example:
+#### Example minter mod chain
 
 1. **Capped Minter** enforces a hard total-supply ceiling. Always placed in front of the token before chaining on other minter mods.
 2. **Rate Limiter** sits above the capped minter to throttle daily mint volumes.
@@ -31,41 +36,39 @@ flowchart TD
     I --> |mint| E
 ```
 
-## Why build a new mod?
+## Building A New Minter Mod
 
-Every project has unique minting requirements—time-windows, on-chain proofs, fee splits, identity checks, supply curves. By building your own `ZkMinterV1` extension you get:
+Every project has unique minting requirements that may not be supported by the current set of minter mods. A new minter mod should inherit from `[ZkMinterV1](https://github.com/zksync-association/zkminters/blob/3362afb2b5ae1c4bbfc59ad3976a6a5d5e0d4fd1/src/ZkMinterV1.sol)` . Some benefits of `ZkMinterV1` include:
 
 - A standardized, audit-friendly scaffold with roles, pause/close, and event emission.
 - Plug-and-play composability with existing mods.
 - Easy customization within a standard framework.
 
-# Roles & Controls
+### ZkMinterV1 functionality
 
-Every `ZkMinterV1` extension ships with a set of built-in roles and lifecycle actions you can rely on:
+Every `ZkMinterV1` extension ships with a set of built-in roles and lifecycle actions.
 
-### Roles
+#### Roles
 
 • **`DEFAULT_ADMIN_ROLE`**
 – The admin of the module. Can grant/revoke roles, update parameters, update the `mintable` address, and perform permanent shutdowns by calling `close()`.
-– Typical actors: DAO treasury or core team multisig.
+– Example values: DAO treasury or core team multisig.
 
 • **`MINTER_ROLE`**
 – Addresses granted this role are authorized to call `mint()` when the contract is neither paused nor closed.
-– Typical actors: trusted dApp component, auction contract, vesting scheduler.
+– Example values: trusted dApp component, auction contract, vesting scheduler.
 
 • **`PAUSER_ROLE`**
 – Addresses granted this role can call `pause()` / `unpause()`, halting minting in emergencies or during upgrades without losing state.
-– Typical actors: security engineer, devops on-call.
+– Example values: security council, the default admin.
 
-### Controls
+#### Controls
 
 • **`function pause()`**
 – Temporarily blocks further mint calls while preserving on-chain counters, caps, and configuration.
-– Use cases: emergency response to a bug, network congestion, or planned upgrades.
 
 • **`function unpause()`**
 – Re-enables minting after a pause, restoring all mint calls without altering state.
-– Use cases: resume operations once an emergency patch is deployed or planned maintenance completes.
 
 • **`function close()`**
 – Permanently sets `closed = true` and emits `Closed(address closer)`. All future mints will revert.
@@ -73,27 +76,67 @@ Every `ZkMinterV1` extension ships with a set of built-in roles and lifecycle ac
 
 • **`function updateMintable(IMintable)`**
 – Swaps the downstream `mintable` address so future `mint(...)` calls forward to a new contract.
-– Use cases: upgrade your mint logic, replace the token contract, or re-layer mods without redeploying.
+– Use cases: upgrade mint logic, replace the token contract, or re-layer mods without redeploying.
 
-# Constructing a Minter Mod Contract
+### Constructing a Minter Mod Contract
 
-When building a new minter mod, you simply inherit from the `ZkMinterV1` contract. The base contract provides all of the required roles, pause/close logic, mintable-target management, events and error handling. All you have to do is:
+When building a new minter mod, simply inherit from the `ZkMinterV1` contract. The base contract provides all of the required roles, pause/close logic, mintable-target management, events and error handling. After inheriting `ZkMinterV1` the following steps should be taken:
 
-1. Declare your global states (e.g. caps, thresholds, rate limits, delays, etc.)
-2. In your constructor, set your `mintable` address, a token or another minter mod, using `_updateMintable`. Grant `DEFAULT_ADMIN_ROLE` and `PAUSER_ROLE` to your initial admin by calling the `_grantRole` function. And initialize other params that are relevant to your minter mod custom logic.
-3. Implement the `mint(address,uint256)` function to enforce your policy, make sure to call `mintable.mint(address,uint256)` and emit `Minted`.
+1. Declare global states (e.g. caps, thresholds, rate limits, delays, etc.)
+2. In the constructor, set the `mintable` address, a token or another minter mod, using `_updateMintable`. Grant `DEFAULT_ADMIN_ROLE` and `PAUSER_ROLE` to the initial admin by calling the `_grantRole` function. And initialize other params that are relevant to the minter mod custom logic.
+3. Implement the `mint(address,uint256)` function to enforce the policy, make sure to call `mintable.mint(address,uint256)` and emit `Minted`.
 4. Add any setters (e.g. `updateCap`, `updateThreshold`, etc.) guarded by `DEFAULT_ADMIN_ROLE` and emit custom events if needed.
+
+## Development
+
+### Build and test
+
+This project uses [Foundry-zksync](https://github.com/matter-labs/foundry-zksync). Follow [these instructions](https://github.com/matter-labs/foundry-zksync) to install it.
+
+Clone the repo.
+
+Set up your .env file
+
+```bash
+cp .env.template .env
+# edit the .env to fill in values
+```
+
+Install dependencies & run tests.
+
+```bash
+forge install
+forge build --zksync
+forge test --zksync
+```
+
+### Spec and lint
+
+This project uses [scopelint](https://github.com/ScopeLift/scopelint) for linting and spec generation. Follow [these instructions](https://github.com/ScopeLift/scopelint?tab=readme-ov-file#installation) to install it.
+
+To use scopelint's linting functionality, run:
+
+```bash
+scopelint check # check formatting
+scopelint fmt # apply formatting changes
+```
+
+To use scopelint's spec generation functionality, run:
+
+```bash
+scopelint spec
+```
+
+This command will use the names of the contract's unit tests to generate a human readable spec. It will list each contract, its constituent functions, and the human readable description of functionality each unit test aims to assert.
 
 # Contributing Guidelines
 
-Whether you’re building your own ZkMinter extension or improving the core repo, please follow these norms and procedures to keep our codebase consistent, secure, and review‐ready.
+Whether you’re building your own ZkMinter extension or improving the core repo, please follow these norms and procedures to keep our codebase consistent and secure.
 
 #### 1. Workflow & Branching
 
-- Fork the main repo and clone your fork.
-- Create a descriptive branch off main (or dev):
-  feat/<short-description>
-  fix/<short-description>
+- Fork the main repo and clone the fork.
+- Create a descriptive branch off main.
 - Keep branches focused—one logical change per branch/PR.
 
 #### 2. Development & Testing
@@ -118,12 +161,12 @@ npm run test
 
 #### 4. PR Checklist
 
-Before requesting review, ensure you have:
+Before requesting review, ensure the following:
 
-- [ ] Pulled the latest `main` branch and rebased your branch.
+- [ ] Pulled and rebased the latest `main` branch.
 - [ ] All tests passing and lint errors fixed.
 - [ ] NatSpec comments on any new or modified functions, variables, events, and errors.
-- [ ] A clear PR title and description explaining what you’ve done and why.
+- [ ] A clear PR title and description explaining what work has been done and why.
 
 # ZkMinterV1
 
