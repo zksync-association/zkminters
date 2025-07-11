@@ -13,7 +13,7 @@ ZkMinter extensions are designed to be chain multiple mods on the same token or 
 2. **Rate Limiter** sits above the capped minter to throttle daily mint volumes.
 3. **Eligibility Check** (ERC-1155 or custom) wraps the rate‐limited minter to gate minting based on external balance.
 
-Under the hood each mod implements `IMintable` and points its `mintable` address at the next layer down (or the core token). This lets you mix-and-match minter mods.
+Under the hood each mod implements `IMintable` and points its `mintable` address at the next layer down (or the core token). 
 
 ```mermaid
 flowchart TD
