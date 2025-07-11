@@ -38,11 +38,20 @@ flowchart TD
 
 ## Building A New Minter Mod
 
-Every project has unique minting requirements that may not be supported by the current set of minter mods. A new minter mod should inherit from `[ZkMinterV1](https://github.com/zksync-association/zkminters/blob/3362afb2b5ae1c4bbfc59ad3976a6a5d5e0d4fd1/src/ZkMinterV1.sol)` . Some benefits of `ZkMinterV1` include:
+Every project has unique minting requirements that may not be supported by the current set of minter mods. A new minter mod should inherit from [ZkMinterV1](https://github.com/zksync-association/zkminters/blob/3362afb2b5ae1c4bbfc59ad3976a6a5d5e0d4fd1/src/ZkMinterV1.sol). Some benefits of `ZkMinterV1` include:
 
 - A standardized, audit-friendly scaffold with roles, pause/close, and event emission.
 - Plug-and-play composability with existing mods.
 - Easy customization within a standard framework.
+
+### Constructing a Minter Mod Contract
+
+When building a new minter mod, simply inherit from the `ZkMinterV1` contract. The base contract provides all of the required roles, pause/close logic, mintable-target management, events and error handling. After inheriting `ZkMinterV1` the following steps should be taken:
+
+1. Declare global states (e.g. caps, thresholds, rate limits, delays, etc.)
+2. In the constructor, set the `mintable` address, a token or another minter mod, using `_updateMintable`. Grant `DEFAULT_ADMIN_ROLE` and `PAUSER_ROLE` to the initial admin by calling the `_grantRole` function. And initialize other params that are relevant to the minter mod custom logic.
+3. Implement the `mint(address,uint256)` function to enforce the policy, make sure to call `mintable.mint(address,uint256)` and emit `Minted`.
+4. Add any setters (e.g. `updateCap`,
 
 ### ZkMinterV1 functionality
 
@@ -77,15 +86,7 @@ Every `ZkMinterV1` extension ships with a set of built-in roles and lifecycle ac
 • **`function updateMintable(IMintable)`**
 – Swaps the downstream `mintable` address so future `mint(...)` calls forward to a new contract.
 – Use cases: upgrade mint logic, replace the token contract, or re-layer mods without redeploying.
-
-### Constructing a Minter Mod Contract
-
-When building a new minter mod, simply inherit from the `ZkMinterV1` contract. The base contract provides all of the required roles, pause/close logic, mintable-target management, events and error handling. After inheriting `ZkMinterV1` the following steps should be taken:
-
-1. Declare global states (e.g. caps, thresholds, rate limits, delays, etc.)
-2. In the constructor, set the `mintable` address, a token or another minter mod, using `_updateMintable`. Grant `DEFAULT_ADMIN_ROLE` and `PAUSER_ROLE` to the initial admin by calling the `_grantRole` function. And initialize other params that are relevant to the minter mod custom logic.
-3. Implement the `mint(address,uint256)` function to enforce the policy, make sure to call `mintable.mint(address,uint256)` and emit `Minted`.
-4. Add any setters (e.g. `updateCap`, `updateThreshold`, etc.) guarded by `DEFAULT_ADMIN_ROLE` and emit custom events if needed.
+ `updateThreshold`, etc.) guarded by `DEFAULT_ADMIN_ROLE` and emit custom events if needed.
 
 ## Development
 
@@ -129,7 +130,7 @@ scopelint spec
 
 This command will use the names of the contract's unit tests to generate a human readable spec. It will list each contract, its constituent functions, and the human readable description of functionality each unit test aims to assert.
 
-# Contributing Guidelines
+## Contributing Guidelines
 
 Whether you’re building your own ZkMinter extension or improving the core repo, please follow these norms and procedures to keep our codebase consistent and secure.
 
@@ -168,9 +169,11 @@ Before requesting review, ensure the following:
 - [ ] NatSpec comments on any new or modified functions, variables, events, and errors.
 - [ ] A clear PR title and description explaining what work has been done and why.
 
-# ZkMinterV1
+## Contract API
 
-### Inheritance
+### ZkMinterV1
+
+#### Inheritance
 
 `ZkMinterV1` inherits from:
 
@@ -178,7 +181,7 @@ Before requesting review, ensure the following:
 - `AccessControl`– OZ role-based permissions (`DEFAULT_ADMIN_ROLE`, `MINTER_ROLE`, etc.).
 - `Pausable` – OZ pause/unpause functionality.
 
-### FUNCTIONS
+#### Functions
 
 | Function Signature                                        |
 | --------------------------------------------------------- |
@@ -189,7 +192,7 @@ Before requesting review, ensure the following:
 | [`_updateMintable(IMintable)`](#_updateMintableIMintable) |
 | [`_revertIfClosed()`](#_revertifclosed)                   |
 
-## EVENTS
+#### Events
 
 | Event Signature                                                                                                                                                          |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -197,59 +200,59 @@ Before requesting review, ensure the following:
 | [`Minted(address indexed minter, address indexed to, uint256 amount)`](#Mintedaddress-indexed-minter-address-indexed-to-uint256-amount)                                  |
 | [`MintableUpdated(IMintable indexed previousMintable, IMintable indexed newMintable)`](#MintableUpdatedIMintable-indexed-previousMintable-IMintable-indexed-newMintable) |
 
-## ERRORS
+#### Errors
 
 | Error Signature                                           |
 | --------------------------------------------------------- |
 | [`ZkMinter__ContractClosed()`](#ZkMinter__ContractClosed) |
 
-### pause()
+##### pause()
 
 Pauses all minting operations.
 
 - Caller must have the `PAUSER_ROLE`.
 - Invokes OZ’s `_pause()` to block further `mint()` calls until `unpause()` is called.
 
-### unpause()
+##### unpause()
 
 Resumes minting after a pause.
 
 - Caller must have the `PAUSER_ROLE`.
 - Invokes OZ’s `_unpause()` so `mint()` can be called again.
 
-### close()
+##### close()
 
 Permanently disables all future minting.
 
 - Caller must have the `DEFAULT_ADMIN_ROLE`.
 - Sets `closed = true` and emits the [`Closed(address closer)`](#closedaddress-closer) event.
 
-### updateMintable(IMintable)
+##### updateMintable(IMintable)
 
 Updates the `mintable` address — a token or another minter mod contract.
 
 - Caller must have the `DEFAULT_ADMIN_ROLE`.
 - Calls internal `_updateMintable` and emits [`MintableUpdated(previous, new)`](#mintableupdatedimintable-indexed-previousmintable-imintable-indexed-newmintable).
 
-### \_updateMintable(IMintable)
+##### \_updateMintable(IMintable)
 
 Internal helper that updates the `mintable` address.
 
 - Emits the [`MintableUpdated`](#mintableupdatedimintable-indexed-previousmintable-imintable-indexed-newmintable) event with old and new targets.
 
-### \_revertIfClosed()
+##### \_revertIfClosed()
 
 Reverts the call if the contract has been permanently closed.
 
 - Throws [`ZkMinter__ContractClosed()`](#zkminter__contractclosed) if `closed == true`.
 
-### Closed(address)
+##### Closed(address)
 
 Emitted when `close()` is called successfully.
 
 - `address`: the admin who performed the permanent shutdown.
 
-### Minted(address indexed minter, address indexed to, uint256 amount)
+##### Minted(address indexed minter, address indexed to, uint256 amount)
 
 Emitted after any successful `mint()`.
 
@@ -257,28 +260,28 @@ Emitted after any successful `mint()`.
 - `to`: recipient of the newly minted tokens.
 - `amount`: number of tokens minted.
 
-### MintableUpdated(IMintable indexed previousMintable, IMintable indexed newMintable)
+##### MintableUpdated(IMintable indexed previousMintable, IMintable indexed newMintable)
 
 Emitted when the target `mintable` contract is changed via `updateMintable`.
 
 - `previousMintable`: the old mintable contract.
 - `newMintable`: the new mintable contract.
 
-### ZkMinter\_\_ContractClosed()
+##### ZkMinter\_\_ContractClosed()
 
 Thrown by `_revertIfClosed()` to halt execution once the mod is `closed`.
 
 - Guards every mint path to ensure no tokens are ever minted after a permanent shutdown.
 
-# IMintable
+## IMintable
 
-### FUNCTIONS
+#### FUNCTIONS
 
 | Function Signature                            |
 | --------------------------------------------- |
 | [mint(address \_to, uint256 \_amount)](#mint) |
 
-### mint(address \_to, uint256 \_amount)
+#### mint(address \_to, uint256 \_amount)
 
 – Mint `_amount` tokens to the account `_to`.
 – Must be implemented by any contract conforming to `IMintable`.
