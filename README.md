@@ -41,7 +41,7 @@ Every project has unique minting requirements—time-windows, on-chain proofs, f
 
 # Roles & Controls
 
-Every ZkMinterV1 extension ships with a set of built-in roles and lifecycle actions you can rely on:
+Every `ZkMinterV1` extension ships with a set of built-in roles and lifecycle actions you can rely on:
 
 ### Roles
 
