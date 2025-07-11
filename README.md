@@ -10,7 +10,7 @@ _Note: The Capped Minter is a special layer that sits directly in front of the c
 ZkMinter extensions are designed to be chain multiple mods on the same token or even on top of each other to enforce sequential rules. For example:
 
 1. **Capped Minter** enforces a hard total-supply ceiling. Always placed in front of the token before chaining on other minter mods.
-2. **Rate Limiter** sits “above” the capped minter to throttle daily mint volumes.
+2. **Rate Limiter** sits above the capped minter to throttle daily mint volumes.
 3. **Eligibility Check** (ERC-1155 or custom) wraps the rate‐limited minter to gate minting based on external balance.
 
 Under the hood each mod implements `IMintable` and points its `mintable` address at the next layer down (or the core token). This lets you mix-and-match minter mods.
