@@ -2,7 +2,6 @@
 
 Minter mods are composable contracts that can plug into tokens to enforce custom mint rules without touching the core token logic. Some examples of custom mint rules include access control based on ERC-1155 ownership, daily or periodic rate limits, and capping the total mint amount.
 
-Each mod includes a specific policy—caps on total supply, ERC-1155 balance checks, daily or periodic rate limits, delayed mint requests, and more.
 
 ## Composability & Extensibility
 
