@@ -7,7 +7,7 @@ Minter mods are composable contracts that can plug into tokens to enforce custom
 
 _Note: The Capped Minter is a special layer that sits directly in front of the core token to enforce your hard total-supply ceiling. All other mods chain on top of it._
 
-ZkMinter extensions are designed to be stackable—you can layer multiple mods on the same token or even on top of each other to enforce sequential rules. For example:
+ZkMinter extensions are designed to be chain multiple mods on the same token or even on top of each other to enforce sequential rules. For example:
 
 1. **Capped Minter** enforces a hard total-supply ceiling. Always placed in front of the token before stacking on other minter mods.
 2. **Rate Limiter** sits “above” the capped minter to throttle daily mint volumes.
