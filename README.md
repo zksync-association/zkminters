@@ -6,7 +6,7 @@ Each mod includes a specific policy—caps on total supply, ERC-1155 balance che
 
 ## Composability & Extensibility
 
-_Note: The Capped Minter is a special layer that sits directly in front of the core token to enforce your hard total-supply ceiling. All other mods stack on top of it._
+_Note: The Capped Minter is a special layer that sits directly in front of the core token to enforce your hard total-supply ceiling. All other mods chain on top of it._
 
 ZkMinter extensions are designed to be stackable—you can layer multiple mods on the same token or even on top of each other to enforce sequential rules. For example:
 
