@@ -169,7 +169,7 @@ Before requesting review, ensure the following:
 - [ ] NatSpec comments on any new or modified functions, variables, events, and errors.
 - [ ] A clear PR title and description explaining what work has been done and why.
 
-## Contract API
+## Contract APIs
 
 ### ZkMinterV1
 
@@ -206,53 +206,53 @@ Before requesting review, ensure the following:
 | --------------------------------------------------------- |
 | [`ZkMinter__ContractClosed()`](#ZkMinter__ContractClosed) |
 
-##### pause()
+#### pause()
 
 Pauses all minting operations.
 
 - Caller must have the `PAUSER_ROLE`.
 - Invokes OZ’s `_pause()` to block further `mint()` calls until `unpause()` is called.
 
-##### unpause()
+#### unpause()
 
 Resumes minting after a pause.
 
 - Caller must have the `PAUSER_ROLE`.
 - Invokes OZ’s `_unpause()` so `mint()` can be called again.
 
-##### close()
+#### close()
 
 Permanently disables all future minting.
 
 - Caller must have the `DEFAULT_ADMIN_ROLE`.
 - Sets `closed = true` and emits the [`Closed(address closer)`](#closedaddress-closer) event.
 
-##### updateMintable(IMintable)
+#### updateMintable(IMintable)
 
 Updates the `mintable` address — a token or another minter mod contract.
 
 - Caller must have the `DEFAULT_ADMIN_ROLE`.
 - Calls internal `_updateMintable` and emits [`MintableUpdated(previous, new)`](#mintableupdatedimintable-indexed-previousmintable-imintable-indexed-newmintable).
 
-##### \_updateMintable(IMintable)
+#### \_updateMintable(IMintable)
 
 Internal helper that updates the `mintable` address.
 
 - Emits the [`MintableUpdated`](#mintableupdatedimintable-indexed-previousmintable-imintable-indexed-newmintable) event with old and new targets.
 
-##### \_revertIfClosed()
+#### \_revertIfClosed()
 
 Reverts the call if the contract has been permanently closed.
 
 - Throws [`ZkMinter__ContractClosed()`](#zkminter__contractclosed) if `closed == true`.
 
-##### Closed(address)
+#### Closed(address)
 
 Emitted when `close()` is called successfully.
 
 - `address`: the admin who performed the permanent shutdown.
 
-##### Minted(address indexed minter, address indexed to, uint256 amount)
+#### Minted(address indexed minter, address indexed to, uint256 amount)
 
 Emitted after any successful `mint()`.
 
@@ -260,14 +260,14 @@ Emitted after any successful `mint()`.
 - `to`: recipient of the newly minted tokens.
 - `amount`: number of tokens minted.
 
-##### MintableUpdated(IMintable indexed previousMintable, IMintable indexed newMintable)
+#### MintableUpdated(IMintable indexed previousMintable, IMintable indexed newMintable)
 
 Emitted when the target `mintable` contract is changed via `updateMintable`.
 
 - `previousMintable`: the old mintable contract.
 - `newMintable`: the new mintable contract.
 
-##### ZkMinter\_\_ContractClosed()
+#### ZkMinter\_\_ContractClosed()
 
 Thrown by `_revertIfClosed()` to halt execution once the mod is `closed`.
 
@@ -275,7 +275,7 @@ Thrown by `_revertIfClosed()` to halt execution once the mod is `closed`.
 
 ## IMintable
 
-#### FUNCTIONS
+#### Functions
 
 | Function Signature                            |
 | --------------------------------------------- |
