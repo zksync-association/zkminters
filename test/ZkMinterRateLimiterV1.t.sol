@@ -24,7 +24,7 @@ contract ZkMinterRateLimiterV1Test is ZkCappedMinterV2Test {
     minterRateLimiter.grantRole(MINTER_ROLE, _minter);
   }
 
-  function test_InitializesMinterRateLimiterCorrectly() public {
+  function test_InitializesMinterRateLimiterCorrectly() public view {
     assertTrue(minterRateLimiter.hasRole(minterRateLimiter.DEFAULT_ADMIN_ROLE(), admin));
     assertTrue(minterRateLimiter.hasRole(minterRateLimiter.PAUSER_ROLE(), admin));
     assertEq(address(minterRateLimiter.mintable()), address(mintable));
