@@ -1,4 +1,5 @@
 [profile.default]
+  cache = true
   evm_version = "paris"
   fs_permissions = [{ access = "read", path = "./zkout" }]
   fuzz = { runs = 50 }

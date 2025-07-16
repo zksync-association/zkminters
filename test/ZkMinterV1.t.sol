@@ -3,10 +3,10 @@ pragma solidity 0.8.24;
 
 import {ZkMinterRateLimiterV1} from "src/ZkMinterRateLimiterV1.sol";
 import {ZkMinterV1} from "src/ZkMinterV1.sol";
-import {ZkCappedMinterV2Test} from "test/helpers/ZkCappedMinterV2.t.sol";
+import {ZkBaseTest} from "test/helpers/ZkBaseTest.t.sol";
 import {IMintable} from "src/interfaces/IMintable.sol";
 
-contract ZkMinterV1Test is ZkCappedMinterV2Test {
+contract ZkMinterV1Test is ZkBaseTest {
   ZkMinterRateLimiterV1 public minterRateLimiter;
   IMintable public mintable;
   uint256 public constant MINT_RATE_LIMIT = 100_000e18;
@@ -24,7 +24,7 @@ contract ZkMinterV1Test is ZkCappedMinterV2Test {
     minterRateLimiter.grantRole(MINTER_ROLE, _minter);
   }
 
-  function test_InitializesMinterRateLimiterCorrectly() public {
+  function test_InitializesMinterRateLimiterCorrectly() public view {
     assertTrue(minterRateLimiter.hasRole(minterRateLimiter.DEFAULT_ADMIN_ROLE(), admin));
     assertTrue(minterRateLimiter.hasRole(minterRateLimiter.PAUSER_ROLE(), admin));
     assertEq(address(minterRateLimiter.mintable()), address(mintable));
