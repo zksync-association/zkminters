@@ -6,7 +6,7 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {IMintable} from "src/interfaces/IMintable.sol";
 import {ZkCappedMinterV2} from "lib/zk-governance/l2-contracts/src/ZkCappedMinterV2.sol";
 
-contract ZkCappedMinterV2Test is ZkTokenTest {
+contract ZkBaseTest is ZkTokenTest {
   ZkCappedMinterV2 public cappedMinter;
   uint256 constant DEFAULT_CAP = 100_000_000e18;
   uint48 DEFAULT_START_TIME;
@@ -63,5 +63,26 @@ contract ZkCappedMinterV2Test is ZkTokenTest {
         Strings.toHexString(uint256(role), 32)
       )
     );
+  }
+
+  // Generic assume helpers for common validation patterns
+  function _assumeSafeAddress(address _address) internal pure {
+    vm.assume(_address != address(0));
+  }
+
+  function _assumeValidAddress(address _addr) internal view {
+    vm.assume(_addr != address(0) && _addr != address(this));
+  }
+
+  function _assumeSafeMintable(IMintable _mintable) internal pure {
+    vm.assume(address(_mintable) != address(0));
+  }
+
+  function _assumeSafeUint(uint256 _value) internal pure {
+    vm.assume(_value != 0);
+  }
+
+  function _boundToRealisticAmount(uint256 _amount) internal pure returns (uint256) {
+    return bound(_amount, 1, DEFAULT_CAP);
   }
 }
