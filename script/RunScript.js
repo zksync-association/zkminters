@@ -7,4 +7,6 @@ if (!scriptName) {
   process.exit(1);
 }
 
-execSync(`npx hardhat clean && npx hardhat compile && npx hardhat run script/${scriptName}`, { stdio: 'inherit' }); 
+// Get additional arguments (like --network)
+const additionalArgs = process.argv.slice(3).join(' ');
+execSync(`npx hardhat clean && npx hardhat compile && npx hardhat run script/${scriptName} ${additionalArgs}`, { stdio: 'inherit' });
