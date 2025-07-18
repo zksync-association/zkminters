@@ -4,11 +4,11 @@ import { Wallet } from "zksync-ethers";
 import * as hre from "hardhat";
 
 // Set these values appropriately for your deployment environment.
-const MINTABLE_ADDRESS = ""; // TODO: Update this to the actual mintable address.
-const ADMIN_ACCOUNT = ""; // TODO: Update this to the actual admin account.
+const MINTABLE_ADDRESS = "0x1234567890123456789012345678901234567890"; // TODO: Update this to the actual mintable address.
+const ADMIN_ACCOUNT = "0x1234567890123456789012345678901234567890"; // TODO: Update this to the actual admin account.
 const MINT_RATE_LIMIT = "1000000000000000000000"; // TODO: Update this to the actual mint rate limit. Currently set to 1000 tokens.
 const MINT_RATE_LIMIT_WINDOW = 86400; // TODO: Update this to the actual mint rate limit window. Currently set to 24 hours.
-const SALT = ""; // TODO: Update this to the actual salt.
+const SALT = "0x1234567890123456789012345678901234567890123456789012345678901234"; // TODO: Update this to the actual salt.
 
 async function main() {
   dotEnvConfig();
