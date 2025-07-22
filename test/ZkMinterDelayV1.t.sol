@@ -6,9 +6,9 @@ import {Test} from "forge-std/Test.sol";
 import {ZkMinterDelayV1, MintRequest} from "src/ZkMinterDelayV1.sol";
 import {IMintable} from "src/interfaces/IMintable.sol";
 import {ZkMinterV1} from "src/ZkMinterV1.sol";
-import {ZkCappedMinterV2Test} from "test/helpers/ZkCappedMinterV2.t.sol";
+import {ZkBaseTest} from "test/helpers/ZkBaseTest.t.sol";
 
-contract ZkMinterDelayV1Test is ZkCappedMinterV2Test {
+contract ZkMinterDelayV1Test is ZkBaseTest {
   ZkMinterDelayV1 public minterDelay;
   IMintable public mintable;
   uint48 public constant MINT_DELAY = 1 days;
@@ -26,22 +26,6 @@ contract ZkMinterDelayV1Test is ZkCappedMinterV2Test {
     minterDelay.grantRole(MINTER_ROLE, minter);
   }
 
-  function _assumeSafeAddress(address _address) internal pure {
-    vm.assume(_address != address(0));
-  }
-
-  function _assumeSafeMintable(IMintable _mintable) internal pure {
-    vm.assume(address(_mintable) != address(0));
-  }
-
-  function _assumeSafeMintDelay(uint48 _mintDelay) internal pure {
-    vm.assume(_mintDelay != 0);
-  }
-
-  function _boundToRealisticAmount(uint256 _amount) internal pure returns (uint256) {
-    return bound(_amount, 1, DEFAULT_CAP);
-  }
-
   function _createMintRequest(address _to, uint256 _amount) internal returns (uint256) {
     vm.prank(minter);
     minterDelay.mint(_to, _amount);
@@ -53,7 +37,7 @@ contract Constructor is ZkMinterDelayV1Test {
   function testFuzz_InitializesMinterDelayCorrectly(IMintable _mintable, address _admin, uint48 _mintDelay) public {
     _assumeSafeAddress(_admin);
     _assumeSafeMintable(_mintable);
-    _assumeSafeMintDelay(_mintDelay);
+    _assumeSafeUint(_mintDelay);
 
     ZkMinterDelayV1 _minterDelay = new ZkMinterDelayV1(_mintable, _admin, _mintDelay);
 
@@ -66,9 +50,9 @@ contract Constructor is ZkMinterDelayV1Test {
   function testFuzz_EmitsMinterDelayUpdatedEvent(IMintable _mintable, address _admin, uint48 _mintDelay) public {
     _assumeSafeMintable(_mintable);
     _assumeSafeAddress(_admin);
-    _assumeSafeMintDelay(_mintDelay);
+    _assumeSafeUint(_mintDelay);
 
-    vm.expectEmit(true, true, true, true);
+    vm.expectEmit();
     emit ZkMinterDelayV1.MintDelayUpdated(minterDelay.mintDelay(), _mintDelay);
     vm.prank(admin);
     minterDelay.updateMintDelay(_mintDelay);
@@ -76,9 +60,9 @@ contract Constructor is ZkMinterDelayV1Test {
 
   function testFuzz_RevertIf_AdminIsZeroAddress(IMintable _mintable, uint48 _mintDelay) public {
     _assumeSafeMintable(_mintable);
-    _assumeSafeMintDelay(_mintDelay);
+    _assumeSafeUint(_mintDelay);
 
-    vm.expectRevert(ZkMinterDelayV1.ZkMinterDelayV1__InvalidAdmin.selector);
+    vm.expectRevert(ZkMinterDelayV1.ZkMinterDelayV1__InvalidZeroAddress.selector);
     new ZkMinterDelayV1(_mintable, address(0), _mintDelay);
   }
 
@@ -88,6 +72,14 @@ contract Constructor is ZkMinterDelayV1Test {
 
     vm.expectRevert(ZkMinterDelayV1.ZkMinterDelayV1__InvalidMintDelay.selector);
     new ZkMinterDelayV1(_mintable, _admin, 0);
+  }
+
+  function testFuzz_RevertIf_MintableIsZeroAddress(address _admin, uint48 _mintDelay) public {
+    _assumeSafeAddress(_admin);
+    _assumeSafeUint(_mintDelay);
+
+    vm.expectRevert(ZkMinterDelayV1.ZkMinterDelayV1__InvalidZeroAddress.selector);
+    new ZkMinterDelayV1(IMintable(address(0)), _admin, _mintDelay);
   }
 }
 
@@ -125,7 +117,7 @@ contract Mint is ZkMinterDelayV1Test {
     _assumeSafeAddress(_to);
     _amount = _boundToRealisticAmount(_amount);
 
-    vm.expectEmit(true, true, true, true);
+    vm.expectEmit();
     emit ZkMinterDelayV1.MintRequested(1, uint48(block.timestamp));
 
     vm.prank(minter);
@@ -135,7 +127,7 @@ contract Mint is ZkMinterDelayV1Test {
   function testFuzz_RevertIf_ToAddressIsZeroAddress(uint256 _amount) public {
     _amount = _boundToRealisticAmount(_amount);
 
-    vm.expectRevert(ZkMinterDelayV1.ZkMinterDelayV1__InvalidToAddress.selector);
+    vm.expectRevert(ZkMinterDelayV1.ZkMinterDelayV1__InvalidZeroAddress.selector);
     minterDelay.mint(address(0), _amount);
   }
 
@@ -217,7 +209,7 @@ contract ExecuteMint is ZkMinterDelayV1Test {
     uint256 _mintRequestId = _createMintRequest(_to, _amount);
     vm.warp(block.timestamp + MINT_DELAY + 1);
 
-    vm.expectEmit(true, true, true, true);
+    vm.expectEmit();
     emit ZkMinterV1.Minted(minter, _to, _amount);
 
     vm.prank(_caller);
@@ -281,7 +273,7 @@ contract ExecuteMint is ZkMinterDelayV1Test {
     minterDelay.executeMint(_mintRequestId);
   }
 
-  function testFuzz_RevertIf_MintTooEarly(address _to, uint256 _amount) public {
+  function testFuzz_RevertIf_MintRequestNotReadyy(address _to, uint256 _amount) public {
     _assumeSafeAddress(_to);
     _amount = _boundToRealisticAmount(_amount);
 
@@ -297,22 +289,22 @@ contract ExecuteMint is ZkMinterDelayV1Test {
 
 contract UpdateMintDelay is ZkMinterDelayV1Test {
   function testFuzz_AdminCanUpdateMintDelay(uint48 _newMintDelay) public {
-    _assumeSafeMintDelay(_newMintDelay);
+    _assumeSafeUint(_newMintDelay);
     vm.prank(admin);
     minterDelay.updateMintDelay(_newMintDelay);
     assertEq(minterDelay.mintDelay(), _newMintDelay);
   }
 
   function testFuzz_EmitsMintDelayUpdatedEvent(uint48 _newMintDelay) public {
-    _assumeSafeMintDelay(_newMintDelay);
-    vm.expectEmit(true, true, true, true);
+    _assumeSafeUint(_newMintDelay);
+    vm.expectEmit();
     emit ZkMinterDelayV1.MintDelayUpdated(minterDelay.mintDelay(), _newMintDelay);
     vm.prank(admin);
     minterDelay.updateMintDelay(_newMintDelay);
   }
 
   function testFuzz_RevertIf_CalledByNonAdmin(uint48 _newMintDelay, address _caller) public {
-    _assumeSafeMintDelay(_newMintDelay);
+    _assumeSafeUint(_newMintDelay);
     vm.assume(_caller != admin);
     vm.expectRevert(_formatAccessControlError(_caller, DEFAULT_ADMIN_ROLE));
     vm.prank(_caller);
@@ -363,7 +355,7 @@ contract CancelMintRequest is ZkMinterDelayV1Test {
 
     uint256 _mintRequestId = _createMintRequest(_to, _amount);
 
-    vm.expectEmit(true, true, true, true);
+    vm.expectEmit();
     emit ZkMinterDelayV1.MintRequestCancelled(_mintRequestId);
 
     vm.prank(admin);
@@ -396,7 +388,7 @@ contract CancelMintRequest is ZkMinterDelayV1Test {
 
   function testFuzz_RevertIf_CalledByNonAdmin(uint256 _mintRequestId, address _caller) public {
     vm.assume(_caller != admin);
-    vm.expectRevert(_formatAccessControlError(_caller, DEFAULT_ADMIN_ROLE));
+    vm.expectRevert(_formatAccessControlError(_caller, minterDelay.VETO_ROLE()));
     vm.prank(_caller);
     minterDelay.cancelMintRequest(_mintRequestId);
   }

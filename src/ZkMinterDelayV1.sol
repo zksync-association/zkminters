@@ -45,18 +45,20 @@ contract ZkMinterDelayV1 is ZkMinterV1 {
   /// @notice Emitted when a mint request is cancelled.
   event MintRequestCancelled(uint256 indexed mintRequestId);
 
+  /// @notice The unique identifier constant used to represent the veto role. An address that has this role may call
+  /// the `cancelMintRequest` method, cancelling pending mint requests. This role may be granted or revoked by the
+  /// DEFAULT_ADMIN_ROLE.
+  bytes32 public constant VETO_ROLE = keccak256("VETO_ROLE");
+
   /*///////////////////////////////////////////////////////////////
                           Errors
   //////////////////////////////////////////////////////////////*/
 
-  /// @notice Error for when the admin is the zero address.
-  error ZkMinterDelayV1__InvalidAdmin();
+  /// @notice Error for when a zero address is provided where it's not allowed.
+  error ZkMinterDelayV1__InvalidZeroAddress();
 
   /// @notice Error for when the mint delay is not set.
   error ZkMinterDelayV1__InvalidMintDelay();
-
-  /// @notice Error for when the to address is the zero address.
-  error ZkMinterDelayV1__InvalidToAddress();
 
   /// @notice Error for when the amount is zero.
   error ZkMinterDelayV1__InvalidAmount();
@@ -101,7 +103,7 @@ contract ZkMinterDelayV1 is ZkMinterV1 {
   /// @param _mintDelay The delay in seconds before minting can begin.
   constructor(IMintable _mintable, address _admin, uint48 _mintDelay) {
     if (_admin == address(0)) {
-      revert ZkMinterDelayV1__InvalidAdmin();
+      revert ZkMinterDelayV1__InvalidZeroAddress();
     }
 
     _updateMintable(_mintable);
@@ -109,6 +111,7 @@ contract ZkMinterDelayV1 is ZkMinterV1 {
 
     _grantRole(DEFAULT_ADMIN_ROLE, _admin);
     _grantRole(PAUSER_ROLE, _admin);
+    _grantRole(VETO_ROLE, _admin);
   }
 
   /*///////////////////////////////////////////////////////////////
@@ -121,7 +124,7 @@ contract ZkMinterDelayV1 is ZkMinterV1 {
   /// @param _amount The quantity of tokens that will be minted.
   function mint(address _to, uint256 _amount) external {
     if (_to == address(0)) {
-      revert ZkMinterDelayV1__InvalidToAddress();
+      revert ZkMinterDelayV1__InvalidZeroAddress();
     }
 
     if (_amount == 0) {
@@ -199,9 +202,9 @@ contract ZkMinterDelayV1 is ZkMinterV1 {
 
   /// @notice Cancels a mint request before the delay period has elapsed.
   /// @param _mintRequestId The id of the mint request to cancel.
-  /// @dev Callable by admin.
+  /// @dev Callable by addresses with VETO_ROLE.
   function cancelMintRequest(uint256 _mintRequestId) external {
-    _checkRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    _checkRole(VETO_ROLE, msg.sender);
 
     MintRequest storage mintRequest = mintRequests[_mintRequestId];
 
@@ -233,5 +236,14 @@ contract ZkMinterDelayV1 is ZkMinterV1 {
     }
     emit MintDelayUpdated(mintDelay, _newMintDelay);
     mintDelay = _newMintDelay;
+  }
+
+  /// @notice Updates the mintable contract with zero address validation.
+  /// @param _mintable The new mintable contract to use.
+  function _updateMintable(IMintable _mintable) internal virtual override {
+    if (address(_mintable) == address(0)) {
+      revert ZkMinterDelayV1__InvalidZeroAddress();
+    }
+    super._updateMintable(_mintable);
   }
 }
