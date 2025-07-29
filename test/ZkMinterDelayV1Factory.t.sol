@@ -42,7 +42,6 @@ contract CreateMinterDelay is ZkMinterDelayV1FactoryTest {
     uint48 _mintDelay,
     uint256 _saltNonce
   ) public {
-    _assumeValidMintable(_mintable);
     _assumeValidAddress(_minterAdmin);
     _assumeValidMintDelay(_mintDelay);
 
@@ -61,7 +60,6 @@ contract CreateMinterDelay is ZkMinterDelayV1FactoryTest {
     uint48 _mintDelay,
     uint256 _saltNonce
   ) public {
-    _assumeValidMintable(_mintable);
     _assumeValidAddress(_minterAdmin);
     _assumeValidMintDelay(_mintDelay);
 
@@ -79,7 +77,6 @@ contract CreateMinterDelay is ZkMinterDelayV1FactoryTest {
     uint48 _mintDelay,
     uint256 _saltNonce
   ) public {
-    _assumeValidMintable(_mintable);
     _assumeValidAddress(_minterAdmin);
     _assumeValidMintDelay(_mintDelay);
 
@@ -98,7 +95,6 @@ contract CreateMinterDelay is ZkMinterDelayV1FactoryTest {
     uint48 _mintDelay,
     uint256 _saltNonce
   ) public {
-    _assumeValidMintable(_mintable);
     _assumeValidAddress(_minterAdmin);
     _assumeValidMintDelay(_mintDelay);
 
@@ -116,7 +112,6 @@ contract CreateMinterDelay is ZkMinterDelayV1FactoryTest {
     uint48 _mintDelay,
     uint256 _saltNonce
   ) public {
-    _assumeValidMintable(_mintable);
     _assumeValidAddress(_minterAdmin);
     _assumeValidMintDelay(_mintDelay);
 
@@ -139,19 +134,9 @@ contract CreateMinterDelay is ZkMinterDelayV1FactoryTest {
     address _minterAdmin,
     uint256 _saltNonce
   ) public {
-    _assumeValidMintable(_mintable);
     _assumeValidAddress(_minterAdmin);
     vm.expectRevert(abi.encodeWithSelector(ZkMinterDelayV1.ZkMinterDelayV1__InvalidMintDelay.selector));
     factory.createMinter(_mintable, _minterAdmin, 0, _saltNonce);
-  }
-
-  function testFuzz_RevertIf_CreatingMinterWithZeroMintable(address _minterAdmin, uint48 _mintDelay, uint256 _saltNonce)
-    public
-  {
-    _assumeValidAddress(_minterAdmin);
-    _assumeValidMintDelay(_mintDelay);
-    vm.expectRevert(abi.encodeWithSelector(ZkMinterDelayV1.ZkMinterDelayV1__InvalidZeroAddress.selector));
-    factory.createMinter(IMintable(address(0)), _minterAdmin, _mintDelay, _saltNonce);
   }
 }
 
@@ -162,7 +147,6 @@ contract GetMinter is ZkMinterDelayV1FactoryTest {
     uint48 _mintDelay,
     uint256 _saltNonce
   ) public {
-    _assumeValidMintable(_mintable);
     _assumeValidAddress(_minterAdmin);
     _assumeValidMintDelay(_mintDelay);
 
@@ -178,7 +162,6 @@ contract GetMinter is ZkMinterDelayV1FactoryTest {
     uint48 _mintDelay,
     uint256 _saltNonce
   ) public {
-    _assumeValidMintable(_mintable);
     _assumeValidAddress(_minterAdmin);
     _assumeValidMintDelay(_mintDelay);
 

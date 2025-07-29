@@ -336,6 +336,7 @@ contract VetoMintRequest is ZkMinterDelayV1Test {
   }
 
   function testFuzz_RevertIf_MintIsAlreadyExecuted(address _to, uint256 _amount) public {
+    _assumeSafeAddress(_to);
     _amount = _boundToRealisticAmount(_amount);
 
     uint256 _mintRequestId = _createMintRequest(_to, _amount);
