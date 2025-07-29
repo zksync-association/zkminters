@@ -36,7 +36,6 @@ contract ZkMinterDelayV1Test is ZkBaseTest {
 contract Constructor is ZkMinterDelayV1Test {
   function testFuzz_InitializesMinterDelayCorrectly(IMintable _mintable, address _admin, uint48 _mintDelay) public {
     _assumeSafeAddress(_admin);
-    _assumeSafeMintable(_mintable);
     _assumeSafeUint(_mintDelay);
 
     ZkMinterDelayV1 _minterDelay = new ZkMinterDelayV1(_mintable, _admin, _mintDelay);
@@ -48,18 +47,16 @@ contract Constructor is ZkMinterDelayV1Test {
   }
 
   function testFuzz_EmitsMinterDelayUpdatedEvent(IMintable _mintable, address _admin, uint48 _mintDelay) public {
-    _assumeSafeMintable(_mintable);
     _assumeSafeAddress(_admin);
     _assumeSafeUint(_mintDelay);
 
     vm.expectEmit();
-    emit ZkMinterDelayV1.MintDelayUpdated(minterDelay.mintDelay(), _mintDelay);
-    vm.prank(admin);
-    minterDelay.updateMintDelay(_mintDelay);
+    emit ZkMinterDelayV1.MintDelayUpdated(0, _mintDelay);
+
+    new ZkMinterDelayV1(_mintable, _admin, _mintDelay);
   }
 
   function testFuzz_RevertIf_AdminIsZeroAddress(IMintable _mintable, uint48 _mintDelay) public {
-    _assumeSafeMintable(_mintable);
     _assumeSafeUint(_mintDelay);
 
     vm.expectRevert(ZkMinterDelayV1.ZkMinterDelayV1__InvalidZeroAddress.selector);
