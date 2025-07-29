@@ -107,7 +107,7 @@ contract ZkMinterDelayV1 is ZkMinterV1 {
     }
 
     _updateMintable(_mintable);
-    _setMintDelay(_mintDelay);
+    _updateMintDelay(_mintDelay);
 
     _grantRole(DEFAULT_ADMIN_ROLE, _admin);
     _grantRole(PAUSER_ROLE, _admin);
@@ -122,15 +122,7 @@ contract ZkMinterDelayV1 is ZkMinterV1 {
   /// @dev The actual minting does not occur immediately; it must be executed separately.
   /// @param _to The address that will receive the new tokens.
   /// @param _amount The quantity of tokens that will be minted.
-  function mint(address _to, uint256 _amount) external {
-    if (_to == address(0)) {
-      revert ZkMinterDelayV1__InvalidZeroAddress();
-    }
-
-    if (_amount == 0) {
-      revert ZkMinterDelayV1__InvalidAmount();
-    }
-
+  function mint(address _to, uint256 _amount) external virtual {
     _revertIfClosed();
     _requireNotPaused();
     _checkRole(MINTER_ROLE, msg.sender);
@@ -149,7 +141,7 @@ contract ZkMinterDelayV1 is ZkMinterV1 {
   /// address.
   /// @param _mintRequestId The id of the mint request to execute.
   /// @dev Callable by anyone post execution delay.
-  function executeMint(uint256 _mintRequestId) external {
+  function executeMint(uint256 _mintRequestId) external virtual {
     _revertIfClosed();
     _requireNotPaused();
 
@@ -183,22 +175,22 @@ contract ZkMinterDelayV1 is ZkMinterV1 {
 
   /// @notice Updates the mint delay.
   /// @param _newMintDelay The new mint delay in seconds.
-  function updateMintDelay(uint48 _newMintDelay) external {
+  function updateMintDelay(uint48 _newMintDelay) external virtual {
     _checkRole(DEFAULT_ADMIN_ROLE, msg.sender);
-    _setMintDelay(_newMintDelay);
+    _updateMintDelay(_newMintDelay);
   }
 
   /// @notice Returns the mint request for a given mint request id.
   /// @param _mintRequestId The id of the mint request to return.
   /// @return The mint request.
-  function getMintRequest(uint256 _mintRequestId) external view returns (MintRequest memory) {
+  function getMintRequest(uint256 _mintRequestId) external view virtual returns (MintRequest memory) {
     return mintRequests[_mintRequestId];
   }
 
   /// @notice Veto a mint request.
   /// @param _mintRequestId The id of the mint request to veto.
   /// @dev Callable by addresses with VETO_ROLE.
-  function vetoMintRequest(uint256 _mintRequestId) external {
+  function vetoMintRequest(uint256 _mintRequestId) external virtual {
     _checkRole(VETO_ROLE, msg.sender);
 
     MintRequest storage mintRequest = mintRequests[_mintRequestId];
@@ -225,20 +217,11 @@ contract ZkMinterDelayV1 is ZkMinterV1 {
   /// @notice Updates the mint delay.
   /// @param _newMintDelay The new mint delay in seconds.
   /// @dev Updating this will affect any unexecuted mint requests.
-  function _setMintDelay(uint48 _newMintDelay) internal {
+  function _updateMintDelay(uint48 _newMintDelay) internal virtual {
     if (_newMintDelay == 0) {
       revert ZkMinterDelayV1__InvalidMintDelay();
     }
     emit MintDelayUpdated(mintDelay, _newMintDelay);
     mintDelay = _newMintDelay;
-  }
-
-  /// @notice Updates the mintable contract with zero address validation.
-  /// @param _mintable The new mintable contract to use.
-  function _updateMintable(IMintable _mintable) internal virtual override {
-    if (address(_mintable) == address(0)) {
-      revert ZkMinterDelayV1__InvalidZeroAddress();
-    }
-    super._updateMintable(_mintable);
   }
 }
