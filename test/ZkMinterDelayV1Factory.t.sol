@@ -14,10 +14,10 @@ contract ZkMinterDelayV1FactoryTest is Test {
 
   function setUp() public virtual {
     // Read the bytecode hash from the JSON file
-    string memory root = vm.projectRoot();
-    string memory path = string.concat(root, "/zkout/ZkMinterDelayV1.sol/ZkMinterDelayV1.json");
-    string memory json = vm.readFile(path);
-    bytecodeHash = bytes32(stdJson.readBytes(json, ".hash"));
+    string memory _root = vm.projectRoot();
+    string memory _path = string.concat(_root, "/zkout/ZkMinterDelayV1.sol/ZkMinterDelayV1.json");
+    string memory _json = vm.readFile(_path);
+    bytecodeHash = bytes32(stdJson.readBytes(_json, ".hash"));
 
     factory = new ZkMinterDelayV1Factory(bytecodeHash);
   }
