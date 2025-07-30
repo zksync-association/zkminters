@@ -97,14 +97,6 @@ contract ZkMinterERC1155EligibilityV1 is ZkMinterV1 {
     _revertIfClosed();
     _requireNotPaused();
 
-    if (_to == address(0)) {
-      revert ZkMinterERC1155EligibilityV1__InvalidZeroAddress();
-    }
-
-    if (_amount == 0) {
-      revert ZkMinterERC1155EligibilityV1__InvalidAmount();
-    }
-
     // revert if the caller has an insufficient balance
     if (!_isEligible(msg.sender)) {
       revert ZkMinterERC1155EligibilityV1__InsufficientBalance();
@@ -114,13 +106,6 @@ contract ZkMinterERC1155EligibilityV1 is ZkMinterV1 {
     mintable.mint(_to, _amount);
 
     emit Minted(msg.sender, _to, _amount);
-  }
-
-  /// @notice Updates the ERC1155 contract for the ZkMinter.
-  /// @param _erc1155 The ERC1155 contract to use for balance checks.
-  function updateERC1155(address _erc1155) external {
-    _checkRole(DEFAULT_ADMIN_ROLE, msg.sender);
-    _updateERC1155(_erc1155);
   }
 
   /// @notice Updates the token id for the ERC1155 contract.
