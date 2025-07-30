@@ -18,6 +18,9 @@ contract ZkMinterDelayV1Integration is ZkBaseTest {
   address recipient = makeAddr("recipient");
 
   function setUp() public override {
+    (string memory rpcUrl, uint256 forkBlock) = _getForkConfig();
+    vm.createSelectFork(rpcUrl, forkBlock);
+
     super.setUp();
 
     // Read the bytecode hash from the JSON file
