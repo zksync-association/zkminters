@@ -85,4 +85,23 @@ contract ZkBaseTest is ZkTokenTest {
   function _boundToRealisticAmount(uint256 _amount) internal pure returns (uint256) {
     return bound(_amount, 1, DEFAULT_CAP);
   }
+
+  /// @notice Internal function to get fork configuration with default values
+  /// @return rpcUrl The RPC URL to use for forking
+  /// @return forkBlock The block number to fork from
+  function _getForkConfig() internal view returns (string memory rpcUrl, uint256 forkBlock) {
+    // Get RPC URL with default fallback
+    try vm.envString("RPC_URL") returns (string memory envRpcUrl) {
+      rpcUrl = envRpcUrl;
+    } catch {
+      rpcUrl = "https://sepolia.era.zksync.dev/";
+    }
+
+    // Get fork block with default fallback
+    try vm.envUint("FORK_BLOCK") returns (uint256 envForkBlock) {
+      forkBlock = envForkBlock;
+    } catch {
+      forkBlock = 5_573_532;
+    }
+  }
 }
