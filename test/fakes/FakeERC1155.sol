@@ -47,7 +47,7 @@ contract FakeERC1155 is IERC1155 {
     // Empty implementation for testing
   }
 
-  function isApprovedForAll(address account, address operator) external view override returns (bool) {
+  function isApprovedForAll(address, address) external pure override returns (bool) {
     return false; // Always return false for simplicity in testing
   }
 
@@ -68,11 +68,11 @@ contract FakeERC1155 is IERC1155 {
     // Empty implementation for testing
   }
 
-  function uri(uint256 id) external view returns (string memory) {
+  function uri(uint256) external pure returns (string memory) {
     return ""; // Return empty string for simplicity in testing
   }
 
-  function supportsInterface(bytes4 interfaceId) external view returns (bool) {
+  function supportsInterface(bytes4 interfaceId) external pure returns (bool) {
     return interfaceId == type(IERC1155).interfaceId;
   }
 }
