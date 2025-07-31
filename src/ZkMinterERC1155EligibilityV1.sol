@@ -19,9 +19,6 @@ contract ZkMinterERC1155EligibilityV1 is ZkMinterV1 {
                           Events
   //////////////////////////////////////////////////////////////*/
 
-  /// @notice Emitted when the ERC1155 contract is updated.
-  event ERC1155Updated(address indexed previousERC1155, address indexed newERC1155);
-
   /// @notice Emitted when the token id is updated.
   event TokenIdUpdated(uint256 indexed previousTokenId, uint256 indexed newTokenId);
 
@@ -49,7 +46,7 @@ contract ZkMinterERC1155EligibilityV1 is ZkMinterV1 {
   //////////////////////////////////////////////////////////////*/
 
   /// @notice The ERC1155 contract used to verify caller eligibility for minting.
-  IERC1155 public erc1155;
+  IERC1155 public ERC1155;
 
   /// @notice The specific token ID within the ERC1155 contract whose balance is checked.
   uint256 public tokenId;
@@ -74,8 +71,8 @@ contract ZkMinterERC1155EligibilityV1 is ZkMinterV1 {
       revert ZkMinterERC1155EligibilityV1__InvalidZeroAddress();
     }
 
+    ERC1155 = IERC1155(_erc1155);
     _updateMintable(_mintable);
-    _updateERC1155(_erc1155);
     _updateTokenId(_tokenId);
     _updateBalanceThreshold(_balanceThreshold);
 
@@ -143,14 +140,7 @@ contract ZkMinterERC1155EligibilityV1 is ZkMinterV1 {
   /// @param _caller The address to check eligibility for.
   /// @return True if the caller has sufficient balance, false otherwise.
   function _isEligible(address _caller) internal view virtual returns (bool) {
-    return erc1155.balanceOf(_caller, tokenId) >= balanceThreshold;
-  }
-
-  /// @notice Updates the ERC1155 contract for the ZkMinter.
-  /// @param _newERC1155 The ERC1155 contract to use for minting.
-  function _updateERC1155(address _newERC1155) internal virtual {
-    emit ERC1155Updated(address(erc1155), _newERC1155);
-    erc1155 = IERC1155(_newERC1155);
+    return ERC1155.balanceOf(_caller, tokenId) >= balanceThreshold;
   }
 
   /// @notice Updates the token id for the ERC1155 contract.

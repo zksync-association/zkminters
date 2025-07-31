@@ -46,25 +46,10 @@ contract Constructor is ZkMinterERC1155EligibilityV1Test {
       new ZkMinterERC1155EligibilityV1(_mintable, _admin, _erc1155, _tokenId, _balanceThreshold);
 
     assertEq(address(_minterERC1155.mintable()), address(_mintable));
-    assertEq(address(_minterERC1155.erc1155()), _erc1155);
+    assertEq(address(_minterERC1155.ERC1155()), _erc1155);
     assertEq(_minterERC1155.tokenId(), _tokenId);
     assertEq(_minterERC1155.balanceThreshold(), _balanceThreshold);
     assertTrue(_minterERC1155.hasRole(_minterERC1155.DEFAULT_ADMIN_ROLE(), _admin));
-  }
-
-  function testFuzz_EmitsERC1155UpdatedEvent(
-    IMintable _mintable,
-    address _admin,
-    address _erc1155,
-    uint256 _tokenId,
-    uint256 _balanceThreshold
-  ) public {
-    _assumeSafeAddress(_admin);
-    _assumeSafeUint(_balanceThreshold);
-
-    vm.expectEmit();
-    emit ZkMinterERC1155EligibilityV1.ERC1155Updated(address(0), _erc1155);
-    new ZkMinterERC1155EligibilityV1(_mintable, _admin, _erc1155, _tokenId, _balanceThreshold);
   }
 
   function testFuzz_EmitsTokenIdUpdatedEvent(
