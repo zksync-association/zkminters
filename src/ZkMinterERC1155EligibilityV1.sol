@@ -19,9 +19,6 @@ contract ZkMinterERC1155EligibilityV1 is ZkMinterV1 {
                           Events
   //////////////////////////////////////////////////////////////*/
 
-  /// @notice Emitted when the ERC1155 contract is updated.
-  event ERC1155Updated(address indexed previousERC1155, address indexed newERC1155);
-
   /// @notice Emitted when the token id is updated.
   event TokenIdUpdated(uint256 indexed previousTokenId, uint256 indexed newTokenId);
 
@@ -49,7 +46,7 @@ contract ZkMinterERC1155EligibilityV1 is ZkMinterV1 {
   //////////////////////////////////////////////////////////////*/
 
   /// @notice The ERC1155 contract used to verify caller eligibility for minting.
-  IERC1155 public erc1155;
+  IERC1155 public ERC1155;
 
   /// @notice The specific token ID within the ERC1155 contract whose balance is checked.
   uint256 public tokenId;
@@ -74,8 +71,8 @@ contract ZkMinterERC1155EligibilityV1 is ZkMinterV1 {
       revert ZkMinterERC1155EligibilityV1__InvalidZeroAddress();
     }
 
+    ERC1155 = IERC1155(_erc1155);
     _updateMintable(_mintable);
-    _updateERC1155(_erc1155);
     _updateTokenId(_tokenId);
     _updateBalanceThreshold(_balanceThreshold);
 
@@ -93,17 +90,9 @@ contract ZkMinterERC1155EligibilityV1 is ZkMinterV1 {
   /// @dev Caller must hold at least `balanceThreshold` of token `tokenId` in `erc1155`.
   /// @dev The minter role is not used for access control in this contract - eligibility is determined by ERC1155
   /// balance.
-  function mint(address _to, uint256 _amount) external {
+  function mint(address _to, uint256 _amount) external virtual {
     _revertIfClosed();
     _requireNotPaused();
-
-    if (_to == address(0)) {
-      revert ZkMinterERC1155EligibilityV1__InvalidZeroAddress();
-    }
-
-    if (_amount == 0) {
-      revert ZkMinterERC1155EligibilityV1__InvalidAmount();
-    }
 
     // revert if the caller has an insufficient balance
     if (!_isEligible(msg.sender)) {
@@ -116,17 +105,10 @@ contract ZkMinterERC1155EligibilityV1 is ZkMinterV1 {
     emit Minted(msg.sender, _to, _amount);
   }
 
-  /// @notice Updates the ERC1155 contract for the ZkMinter.
-  /// @param _erc1155 The ERC1155 contract to use for balance checks.
-  function updateERC1155(address _erc1155) external {
-    _checkRole(DEFAULT_ADMIN_ROLE, msg.sender);
-    _updateERC1155(_erc1155);
-  }
-
   /// @notice Updates the token id for the ERC1155 contract.
   /// @param _tokenId The new token id to set.
   /// @dev Used in `erc1155.balanceOf(_caller, tokenId)` for eligibility checks.
-  function updateTokenId(uint256 _tokenId) external {
+  function updateTokenId(uint256 _tokenId) external virtual {
     _checkRole(DEFAULT_ADMIN_ROLE, msg.sender);
     _updateTokenId(_tokenId);
   }
@@ -134,7 +116,7 @@ contract ZkMinterERC1155EligibilityV1 is ZkMinterV1 {
   /// @notice Updates the balance threshold for the ERC1155 contract.
   /// @param _balanceThreshold The new balance threshold to set. Must be non-zero.
   /// @dev This is the minimum balance that must be held by the caller to mint.
-  function updateBalanceThreshold(uint256 _balanceThreshold) external {
+  function updateBalanceThreshold(uint256 _balanceThreshold) external virtual {
     _checkRole(DEFAULT_ADMIN_ROLE, msg.sender);
     _updateBalanceThreshold(_balanceThreshold);
   }
@@ -146,7 +128,7 @@ contract ZkMinterERC1155EligibilityV1 is ZkMinterV1 {
   /// @notice Returns whether the given address is eligible to mint.
   /// @param _caller The address to check eligibility for.
   /// @return True if the caller has a balance greater than or equal to the balance threshold, false otherwise.
-  function isEligible(address _caller) public view returns (bool) {
+  function isEligible(address _caller) public view virtual returns (bool) {
     return _isEligible(_caller);
   }
 
@@ -157,27 +139,20 @@ contract ZkMinterERC1155EligibilityV1 is ZkMinterV1 {
   /// @notice Internal function to check if an address is eligible to mint.
   /// @param _caller The address to check eligibility for.
   /// @return True if the caller has sufficient balance, false otherwise.
-  function _isEligible(address _caller) internal view returns (bool) {
-    return erc1155.balanceOf(_caller, tokenId) >= balanceThreshold;
-  }
-
-  /// @notice Updates the ERC1155 contract for the ZkMinter.
-  /// @param _newERC1155 The ERC1155 contract to use for minting.
-  function _updateERC1155(address _newERC1155) internal {
-    emit ERC1155Updated(address(erc1155), _newERC1155);
-    erc1155 = IERC1155(_newERC1155);
+  function _isEligible(address _caller) internal view virtual returns (bool) {
+    return ERC1155.balanceOf(_caller, tokenId) >= balanceThreshold;
   }
 
   /// @notice Updates the token id for the ERC1155 contract.
   /// @param _newTokenId The new token id to set.
-  function _updateTokenId(uint256 _newTokenId) internal {
+  function _updateTokenId(uint256 _newTokenId) internal virtual {
     emit TokenIdUpdated(tokenId, _newTokenId);
     tokenId = _newTokenId;
   }
 
   /// @notice Updates the balance threshold for the ERC1155 contract.
   /// @param _newBalanceThreshold The new balance threshold to set.
-  function _updateBalanceThreshold(uint256 _newBalanceThreshold) internal {
+  function _updateBalanceThreshold(uint256 _newBalanceThreshold) internal virtual {
     if (_newBalanceThreshold == 0) {
       revert ZkMinterERC1155EligibilityV1__InvalidBalanceThreshold();
     }

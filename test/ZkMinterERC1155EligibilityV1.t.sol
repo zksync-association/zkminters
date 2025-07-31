@@ -40,35 +40,16 @@ contract Constructor is ZkMinterERC1155EligibilityV1Test {
     uint256 _balanceThreshold
   ) public {
     _assumeSafeAddress(_admin);
-    _assumeSafeMintable(_mintable);
-    _assumeSafeAddress(_erc1155);
     _assumeSafeUint(_balanceThreshold);
 
     ZkMinterERC1155EligibilityV1 _minterERC1155 =
       new ZkMinterERC1155EligibilityV1(_mintable, _admin, _erc1155, _tokenId, _balanceThreshold);
 
     assertEq(address(_minterERC1155.mintable()), address(_mintable));
-    assertEq(address(_minterERC1155.erc1155()), _erc1155);
+    assertEq(address(_minterERC1155.ERC1155()), _erc1155);
     assertEq(_minterERC1155.tokenId(), _tokenId);
     assertEq(_minterERC1155.balanceThreshold(), _balanceThreshold);
     assertTrue(_minterERC1155.hasRole(_minterERC1155.DEFAULT_ADMIN_ROLE(), _admin));
-  }
-
-  function testFuzz_EmitsERC1155UpdatedEvent(
-    IMintable _mintable,
-    address _admin,
-    address _erc1155,
-    uint256 _tokenId,
-    uint256 _balanceThreshold
-  ) public {
-    _assumeSafeMintable(_mintable);
-    _assumeSafeAddress(_admin);
-    _assumeSafeAddress(_erc1155);
-    _assumeSafeUint(_balanceThreshold);
-
-    vm.expectEmit();
-    emit ZkMinterERC1155EligibilityV1.ERC1155Updated(address(0), _erc1155);
-    new ZkMinterERC1155EligibilityV1(_mintable, _admin, _erc1155, _tokenId, _balanceThreshold);
   }
 
   function testFuzz_EmitsTokenIdUpdatedEvent(
@@ -78,9 +59,7 @@ contract Constructor is ZkMinterERC1155EligibilityV1Test {
     uint256 _tokenId,
     uint256 _balanceThreshold
   ) public {
-    _assumeSafeMintable(_mintable);
     _assumeSafeAddress(_admin);
-    _assumeSafeAddress(_erc1155);
     _assumeSafeUint(_balanceThreshold);
 
     vm.expectEmit();
@@ -95,9 +74,7 @@ contract Constructor is ZkMinterERC1155EligibilityV1Test {
     uint256 _tokenId,
     uint256 _balanceThreshold
   ) public {
-    _assumeSafeMintable(_mintable);
     _assumeSafeAddress(_admin);
-    _assumeSafeAddress(_erc1155);
     _assumeSafeUint(_balanceThreshold);
 
     vm.expectEmit();
@@ -111,8 +88,6 @@ contract Constructor is ZkMinterERC1155EligibilityV1Test {
     uint256 _tokenId,
     uint256 _balanceThreshold
   ) public {
-    _assumeSafeMintable(_mintable);
-    _assumeSafeAddress(_erc1155);
     _assumeSafeUint(_balanceThreshold);
 
     vm.expectRevert(ZkMinterERC1155EligibilityV1.ZkMinterERC1155EligibilityV1__InvalidZeroAddress.selector);
@@ -125,9 +100,7 @@ contract Constructor is ZkMinterERC1155EligibilityV1Test {
     address _erc1155,
     uint256 _tokenId
   ) public {
-    _assumeSafeMintable(_mintable);
     _assumeSafeAddress(_admin);
-    _assumeSafeAddress(_erc1155);
 
     vm.expectRevert(ZkMinterERC1155EligibilityV1.ZkMinterERC1155EligibilityV1__InvalidBalanceThreshold.selector);
     new ZkMinterERC1155EligibilityV1(_mintable, _admin, _erc1155, _tokenId, 0);
@@ -156,22 +129,6 @@ contract Mint is ZkMinterERC1155EligibilityV1Test {
 
     vm.prank(minter);
     minterERC1155.mint(_to, _amount);
-  }
-
-  function testFuzz_RevertIf_ToAddressIsZeroAddress(uint256 _amount) public {
-    _amount = _boundToRealisticAmount(_amount);
-
-    vm.expectRevert(ZkMinterERC1155EligibilityV1.ZkMinterERC1155EligibilityV1__InvalidZeroAddress.selector);
-    vm.prank(minter);
-    minterERC1155.mint(address(0), _amount);
-  }
-
-  function testFuzz_RevertIf_AmountIsZero(address _to) public {
-    _assumeSafeAddress(_to);
-
-    vm.expectRevert(ZkMinterERC1155EligibilityV1.ZkMinterERC1155EligibilityV1__InvalidAmount.selector);
-    vm.prank(minter);
-    minterERC1155.mint(_to, 0);
   }
 
   function testFuzz_RevertIf_InsufficientBalance(address _to, uint256 _amount, uint256 _balance) public {
@@ -212,31 +169,6 @@ contract Mint is ZkMinterERC1155EligibilityV1Test {
   }
 }
 
-contract UpdateERC1155 is ZkMinterERC1155EligibilityV1Test {
-  function testFuzz_AdminCanUpdateERC1155(address _newERC1155) public {
-    _assumeSafeAddress(_newERC1155);
-    vm.prank(admin);
-    minterERC1155.updateERC1155(_newERC1155);
-    assertEq(address(minterERC1155.erc1155()), _newERC1155);
-  }
-
-  function testFuzz_EmitsERC1155UpdatedEvent(address _newERC1155) public {
-    _assumeSafeAddress(_newERC1155);
-    vm.expectEmit();
-    emit ZkMinterERC1155EligibilityV1.ERC1155Updated(address(fakeERC1155), _newERC1155);
-    vm.prank(admin);
-    minterERC1155.updateERC1155(_newERC1155);
-  }
-
-  function testFuzz_RevertIf_CalledByNonAdmin(address _newERC1155, address _caller) public {
-    _assumeSafeAddress(_newERC1155);
-    vm.assume(_caller != admin);
-    vm.expectRevert(_formatAccessControlError(_caller, DEFAULT_ADMIN_ROLE));
-    vm.prank(_caller);
-    minterERC1155.updateERC1155(_newERC1155);
-  }
-}
-
 contract UpdateTokenId is ZkMinterERC1155EligibilityV1Test {
   function testFuzz_AdminCanUpdateTokenId(uint256 _newTokenId) public {
     vm.prank(admin);
@@ -261,14 +193,14 @@ contract UpdateTokenId is ZkMinterERC1155EligibilityV1Test {
 
 contract UpdateBalanceThreshold is ZkMinterERC1155EligibilityV1Test {
   function testFuzz_AdminCanUpdateBalanceThreshold(uint256 _newBalanceThreshold) public {
-    vm.assume(_newBalanceThreshold > 0);
+    _assumeSafeUint(_newBalanceThreshold);
     vm.prank(admin);
     minterERC1155.updateBalanceThreshold(_newBalanceThreshold);
     assertEq(minterERC1155.balanceThreshold(), _newBalanceThreshold);
   }
 
   function testFuzz_EmitsBalanceThresholdUpdatedEvent(uint256 _newBalanceThreshold) public {
-    vm.assume(_newBalanceThreshold > 0);
+    _assumeSafeUint(_newBalanceThreshold);
     vm.expectEmit();
     emit ZkMinterERC1155EligibilityV1.BalanceThresholdUpdated(BALANCE_THRESHOLD, _newBalanceThreshold);
     vm.prank(admin);
@@ -276,7 +208,7 @@ contract UpdateBalanceThreshold is ZkMinterERC1155EligibilityV1Test {
   }
 
   function testFuzz_RevertIf_CalledByNonAdmin(uint256 _newBalanceThreshold, address _caller) public {
-    vm.assume(_newBalanceThreshold > 0);
+    _assumeSafeUint(_newBalanceThreshold);
     vm.assume(_caller != admin);
     vm.expectRevert(_formatAccessControlError(_caller, DEFAULT_ADMIN_ROLE));
     vm.prank(_caller);
