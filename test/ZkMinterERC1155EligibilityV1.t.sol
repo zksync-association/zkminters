@@ -208,14 +208,14 @@ contract UpdateTokenId is ZkMinterERC1155EligibilityV1Test {
 
 contract UpdateBalanceThreshold is ZkMinterERC1155EligibilityV1Test {
   function testFuzz_AdminCanUpdateBalanceThreshold(uint256 _newBalanceThreshold) public {
-    vm.assume(_newBalanceThreshold != 0);
+    _assumeSafeUint(_newBalanceThreshold);
     vm.prank(admin);
     minterERC1155.updateBalanceThreshold(_newBalanceThreshold);
     assertEq(minterERC1155.balanceThreshold(), _newBalanceThreshold);
   }
 
   function testFuzz_EmitsBalanceThresholdUpdatedEvent(uint256 _newBalanceThreshold) public {
-    vm.assume(_newBalanceThreshold != 0);
+    _assumeSafeUint(_newBalanceThreshold);
     vm.expectEmit();
     emit ZkMinterERC1155EligibilityV1.BalanceThresholdUpdated(BALANCE_THRESHOLD, _newBalanceThreshold);
     vm.prank(admin);
@@ -223,7 +223,7 @@ contract UpdateBalanceThreshold is ZkMinterERC1155EligibilityV1Test {
   }
 
   function testFuzz_RevertIf_CalledByNonAdmin(uint256 _newBalanceThreshold, address _caller) public {
-    vm.assume(_newBalanceThreshold != 0);
+    _assumeSafeUint(_newBalanceThreshold);
     vm.assume(_caller != admin);
     vm.expectRevert(_formatAccessControlError(_caller, DEFAULT_ADMIN_ROLE));
     vm.prank(_caller);
