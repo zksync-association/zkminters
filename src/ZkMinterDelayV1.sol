@@ -40,7 +40,7 @@ contract ZkMinterDelayV1 is ZkMinterV1 {
   event MintDelayUpdated(uint48 indexed previousMintDelay, uint48 indexed newMintDelay);
 
   /// @notice Emitted when a mint request is made.
-  event MintRequested(uint256 indexed mintRequestId, uint48 executableAt);
+  event MintRequested(uint256 indexed mintRequestId, address indexed to, uint256 amount, uint48 executableAt);
 
   /// @notice Emitted when a mint request is vetoed.
   event MintRequestVetoed(uint256 indexed mintRequestId);
@@ -137,9 +137,7 @@ contract ZkMinterDelayV1 is ZkMinterV1 {
     mintRequests[nextRequestId] =
       MintRequest({minter: msg.sender, to: _to, amount: _amount, createdAt: _createdAt, executed: false, vetoed: false});
 
-
-    emit MintRequested(nextRequestId, _createdAt + mintDelay);
-
+    emit MintRequested(nextRequestId, _to, _amount, _createdAt + mintDelay);
   }
 
   /// @notice Executes a mint request minting the amount of tokens specified in the request for the specified to
