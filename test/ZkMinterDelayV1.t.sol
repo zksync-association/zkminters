@@ -107,7 +107,7 @@ contract Mint is ZkMinterDelayV1Test {
     _amount = _boundToRealisticAmount(_amount);
 
     vm.expectEmit();
-    emit ZkMinterDelayV1.MintRequested(1, uint48(block.timestamp));
+    emit ZkMinterDelayV1.MintRequested(0, uint48(block.timestamp) + MINT_DELAY);
 
     vm.prank(minter);
     minterDelay.mint(_to, _amount);
