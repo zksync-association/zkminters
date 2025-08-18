@@ -127,6 +127,10 @@ contract ZkMinterDelayV1 is ZkMinterV1 {
     _requireNotPaused();
     _checkRole(MINTER_ROLE, msg.sender);
 
+    if (_to == address(0)) {
+      revert ZkMinterDelayV1__InvalidZeroAddress();
+    }
+
     uint48 _createdAt = uint48(block.timestamp);
 
     mintRequests[nextMintRequestId] =

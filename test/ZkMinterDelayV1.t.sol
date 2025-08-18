@@ -74,6 +74,7 @@ contract Constructor is ZkMinterDelayV1Test {
 
 contract Mint is ZkMinterDelayV1Test {
   function testFuzz_MintRequestIsCreatedCorrectly(address _toAddress, uint256 _mintAmount) public {
+    _assumeSafeAddress(_toAddress);
     _mintAmount = _boundToRealisticAmount(_mintAmount);
 
     vm.prank(minter);
@@ -90,6 +91,7 @@ contract Mint is ZkMinterDelayV1Test {
   }
 
   function testFuzz_IncrementsNextMintRequestId(address _to, uint256 _amount) public {
+    _assumeSafeAddress(_to);
     _amount = _boundToRealisticAmount(_amount);
 
     uint256 _nextMintRequestId = minterDelay.nextMintRequestId();
@@ -101,6 +103,7 @@ contract Mint is ZkMinterDelayV1Test {
   }
 
   function testFuzz_EmitsMintRequestedEvent(address _to, uint256 _amount) public {
+    _assumeSafeAddress(_to);
     _amount = _boundToRealisticAmount(_amount);
 
     vm.expectEmit();
@@ -111,6 +114,7 @@ contract Mint is ZkMinterDelayV1Test {
   }
 
   function testFuzz_RevertIf_MinterIsNotMinterRole(address _to, uint256 _amount, address _caller) public {
+    _assumeSafeAddress(_to);
     _amount = _boundToRealisticAmount(_amount);
     vm.assume(_caller != minter);
 
@@ -229,6 +233,7 @@ contract ExecuteMint is ZkMinterDelayV1Test {
   }
 
   function testFuzz_RevertIf_MintRequestIsVetoed(address _to, uint256 _amount) public {
+    _assumeSafeAddress(_to);
     _amount = _boundToRealisticAmount(_amount);
 
     uint256 _mintRequestId = _createMintRequest(_to, _amount);
@@ -243,6 +248,7 @@ contract ExecuteMint is ZkMinterDelayV1Test {
   }
 
   function testFuzz_RevertIf_MintRequestNotReadyy(address _to, uint256 _amount) public {
+    _assumeSafeAddress(_to);
     _amount = _boundToRealisticAmount(_amount);
 
     uint256 _mintRequestId = _createMintRequest(_to, _amount);
@@ -288,6 +294,7 @@ contract UpdateMintDelay is ZkMinterDelayV1Test {
 
 contract VetoMintRequest is ZkMinterDelayV1Test {
   function testFuzz_CanVetoMintRequestBeforeDelay(address _to, uint256 _amount) public {
+    _assumeSafeAddress(_to);
     _amount = _boundToRealisticAmount(_amount);
 
     uint256 _mintRequestId = _createMintRequest(_to, _amount);
@@ -301,6 +308,7 @@ contract VetoMintRequest is ZkMinterDelayV1Test {
   }
 
   function testFuzz_CanVetoMintRequestAfterDelay(address _to, uint256 _amount) public {
+    _assumeSafeAddress(_to);
     _amount = _boundToRealisticAmount(_amount);
 
     uint256 _mintRequestId = _createMintRequest(_to, _amount);
@@ -316,6 +324,7 @@ contract VetoMintRequest is ZkMinterDelayV1Test {
   }
 
   function testFuzz_EmitsMintRequestVetoedEvent(address _to, uint256 _amount) public {
+    _assumeSafeAddress(_to);
     _amount = _boundToRealisticAmount(_amount);
 
     uint256 _mintRequestId = _createMintRequest(_to, _amount);
