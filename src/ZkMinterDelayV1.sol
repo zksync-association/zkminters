@@ -42,6 +42,7 @@ contract ZkMinterDelayV1 is ZkMinterV1 {
   /// @notice Emitted when a mint request is made.
   event MintRequested(uint256 indexed mintRequestId, address indexed to, uint256 amount, uint48 executableAt);
 
+
   /// @notice Emitted when a mint request is vetoed.
   event MintRequestVetoed(uint256 indexed mintRequestId);
 
@@ -59,9 +60,6 @@ contract ZkMinterDelayV1 is ZkMinterV1 {
 
   /// @notice Error for when the mint delay is not set.
   error ZkMinterDelayV1__InvalidMintDelay();
-
-  /// @notice Error for when the amount is zero.
-  error ZkMinterDelayV1__InvalidAmount();
 
   /// @notice Error for when the mint request is invalid.
   /// @param _mintRequestId The invalid mint request id.
@@ -166,7 +164,7 @@ contract ZkMinterDelayV1 is ZkMinterV1 {
     }
 
     // check if the mint delay has elapsed
-    if (block.timestamp <= mintRequest.createdAt + mintDelay) {
+    if (block.timestamp < mintRequest.createdAt + mintDelay) {
       revert ZkMinterDelayV1__MintRequestNotReady(_mintRequestId);
     }
 
@@ -207,6 +205,12 @@ contract ZkMinterDelayV1 is ZkMinterV1 {
     if (mintRequest.executed) {
       revert ZkMinterDelayV1__MintAlreadyExecuted(_mintRequestId);
     }
+
+	
+   // revert if mint request has already been vetoed
+   if (mintRequest.vetoed) {
+       revert ZkMinterDelayV1__MintRequestVetoed(_mintRequestId);
+   }
 
     mintRequest.vetoed = true;
 

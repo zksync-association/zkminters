@@ -156,7 +156,7 @@ contract ExecuteMint is ZkMinterDelayV1Test {
 
     assertEq(token.balanceOf(_to), 0);
 
-    vm.warp(block.timestamp + MINT_DELAY + 1);
+    vm.warp(block.timestamp + MINT_DELAY);
     minterDelay.executeMint(_mintRequestId);
 
     assertEq(token.balanceOf(_to), _amount);
@@ -170,7 +170,7 @@ contract ExecuteMint is ZkMinterDelayV1Test {
     uint256 _mintRequestId = _createMintRequest(_to, _amount);
     assertFalse(minterDelay.getMintRequest(_mintRequestId).executed);
 
-    vm.warp(block.timestamp + MINT_DELAY + 1);
+    vm.warp(block.timestamp + MINT_DELAY);
     minterDelay.executeMint(_mintRequestId);
 
     assertTrue(minterDelay.getMintRequest(_mintRequestId).executed);
@@ -222,7 +222,7 @@ contract ExecuteMint is ZkMinterDelayV1Test {
     uint256 _mintRequestId = _createMintRequest(_to, _amount);
 
     // Execute the mint request first
-    vm.warp(block.timestamp + MINT_DELAY + 1);
+    vm.warp(block.timestamp + MINT_DELAY);
     minterDelay.executeMint(_mintRequestId);
 
     // Try to execute the same mint request again
@@ -254,6 +254,21 @@ contract ExecuteMint is ZkMinterDelayV1Test {
     uint256 _mintRequestId = _createMintRequest(_to, _amount);
 
     // Try to execute before the delay has elapsed
+    vm.expectRevert(
+      abi.encodeWithSelector(ZkMinterDelayV1.ZkMinterDelayV1__MintRequestNotReady.selector, _mintRequestId)
+    );
+    minterDelay.executeMint(_mintRequestId);
+  }
+
+  function test_RevertIf_MintRequestExecutedExactlyOneSecondBeforeReady() public {
+    address _to = makeAddr("recipient");
+    uint256 _amount = 1000;
+
+    uint256 _mintRequestId = _createMintRequest(_to, _amount);
+
+    // Try to execute exactly 1 second before the delay has elapsed (at createdAt + mintDelay - 1)
+    vm.warp(block.timestamp + MINT_DELAY - 1);
+    
     vm.expectRevert(
       abi.encodeWithSelector(ZkMinterDelayV1.ZkMinterDelayV1__MintRequestNotReady.selector, _mintRequestId)
     );
@@ -350,7 +365,7 @@ contract VetoMintRequest is ZkMinterDelayV1Test {
 
     uint256 _mintRequestId = _createMintRequest(_to, _amount);
 
-    vm.warp(block.timestamp + MINT_DELAY + 1);
+    vm.warp(block.timestamp + MINT_DELAY);
     minterDelay.executeMint(_mintRequestId);
 
     vm.expectRevert(
@@ -364,6 +379,23 @@ contract VetoMintRequest is ZkMinterDelayV1Test {
     vm.assume(_caller != admin);
     vm.expectRevert(_formatAccessControlError(_caller, minterDelay.VETO_ROLE()));
     vm.prank(_caller);
+    minterDelay.vetoMintRequest(_mintRequestId);
+  }
+
+  function testFuzz_RevertIf_MintIsAlreadyVetoed(address _to, uint256 _amount) public {
+    _amount = _boundToRealisticAmount(_amount);
+
+    uint256 _mintRequestId = _createMintRequest(_to, _amount);
+
+    // First veto
+    vm.prank(admin);
+    minterDelay.vetoMintRequest(_mintRequestId);
+
+    // Try to veto again
+    vm.expectRevert(
+      abi.encodeWithSelector(ZkMinterDelayV1.ZkMinterDelayV1__MintRequestVetoed.selector, _mintRequestId)
+    );
+    vm.prank(admin);
     minterDelay.vetoMintRequest(_mintRequestId);
   }
 }
