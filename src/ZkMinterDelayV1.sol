@@ -84,7 +84,7 @@ contract ZkMinterDelayV1 is ZkMinterV1 {
   //////////////////////////////////////////////////////////////*/
 
   /// @notice The next mint request id.
-  uint256 public nextMintRequestId;
+  uint256 public nextMintRequestId = 1;
 
   /// @notice The delay in seconds before minting can begin.
   uint48 public mintDelay;

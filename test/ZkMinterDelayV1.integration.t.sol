@@ -73,7 +73,7 @@ contract ZkMinterDelayV1Integration is ZkBaseTest {
     vm.prank(minter);
     delayMinter.mint(_recipient, _amount);
 
-    uint256 requestId = 0; // First request
+    uint256 requestId = 1; // First request
     MintRequest memory request = delayMinter.getMintRequest(requestId);
 
     assertEq(request.minter, minter);
@@ -128,7 +128,7 @@ contract ZkMinterDelayV1Integration is ZkBaseTest {
     vm.prank(minter);
     delayMinter.mint(_recipient, _amount);
 
-    uint256 _requestId = 0;
+    uint256 _requestId = 1;
 
     // Admin vetoes the request
     vm.prank(admin);
@@ -169,7 +169,7 @@ contract ZkMinterDelayV1Integration is ZkBaseTest {
     vm.prank(minter);
     delayMinter.mint(_recipient, _amount);
 
-    uint256 requestId = 0;
+    uint256 requestId = 1;
 
     // Admin updates the delay to be longer
     vm.prank(admin);
@@ -261,7 +261,7 @@ contract ZkMinterDelayV1Integration is ZkBaseTest {
     vm.prank(minter);
     delayMinter.mint(_recipient, _amount);
 
-    uint256 requestId = 0;
+    uint256 requestId = 1;
 
     // Pause the delay minter
     vm.prank(admin);
@@ -308,7 +308,7 @@ contract ZkMinterDelayV1Integration is ZkBaseTest {
     vm.prank(minter);
     delayMinter.mint(_recipient, _amount);
 
-    uint256 requestId = 0;
+    uint256 requestId = 1;
 
     // Close the contract
     vm.prank(admin);
