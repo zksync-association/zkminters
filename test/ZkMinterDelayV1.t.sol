@@ -268,7 +268,7 @@ contract ExecuteMint is ZkMinterDelayV1Test {
 
     // Try to execute exactly 1 second before the delay has elapsed (at createdAt + mintDelay - 1)
     vm.warp(block.timestamp + MINT_DELAY - 1);
-    
+
     vm.expectRevert(
       abi.encodeWithSelector(ZkMinterDelayV1.ZkMinterDelayV1__MintRequestNotReady.selector, _mintRequestId)
     );
@@ -392,9 +392,7 @@ contract VetoMintRequest is ZkMinterDelayV1Test {
     minterDelay.vetoMintRequest(_mintRequestId);
 
     // Try to veto again
-    vm.expectRevert(
-      abi.encodeWithSelector(ZkMinterDelayV1.ZkMinterDelayV1__MintRequestVetoed.selector, _mintRequestId)
-    );
+    vm.expectRevert(abi.encodeWithSelector(ZkMinterDelayV1.ZkMinterDelayV1__MintRequestVetoed.selector, _mintRequestId));
     vm.prank(admin);
     minterDelay.vetoMintRequest(_mintRequestId);
   }

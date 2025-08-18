@@ -42,7 +42,6 @@ contract ZkMinterDelayV1 is ZkMinterV1 {
   /// @notice Emitted when a mint request is made.
   event MintRequested(uint256 indexed mintRequestId, address indexed to, uint256 amount, uint48 executableAt);
 
-
   /// @notice Emitted when a mint request is vetoed.
   event MintRequestVetoed(uint256 indexed mintRequestId);
 
@@ -206,11 +205,10 @@ contract ZkMinterDelayV1 is ZkMinterV1 {
       revert ZkMinterDelayV1__MintAlreadyExecuted(_mintRequestId);
     }
 
-	
-   // revert if mint request has already been vetoed
-   if (mintRequest.vetoed) {
-       revert ZkMinterDelayV1__MintRequestVetoed(_mintRequestId);
-   }
+    // revert if mint request has already been vetoed
+    if (mintRequest.vetoed) {
+      revert ZkMinterDelayV1__MintRequestVetoed(_mintRequestId);
+    }
 
     mintRequest.vetoed = true;
 
