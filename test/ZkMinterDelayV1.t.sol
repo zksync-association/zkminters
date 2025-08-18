@@ -305,6 +305,19 @@ contract UpdateMintDelay is ZkMinterDelayV1Test {
     vm.prank(admin);
     minterDelay.updateMintDelay(0);
   }
+
+  function testFuzz_RevertIf_ContractIsClosed(uint48 _newMintDelay) public {
+    _assumeSafeUint(_newMintDelay);
+    
+    // Close the contract first
+    vm.prank(admin);
+    minterDelay.close();
+    
+    // Try to update mint delay after contract is closed
+    vm.expectRevert(ZkMinterV1.ZkMinter__ContractClosed.selector);
+    vm.prank(admin);
+    minterDelay.updateMintDelay(_newMintDelay);
+  }
 }
 
 contract VetoMintRequest is ZkMinterDelayV1Test {

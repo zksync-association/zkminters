@@ -177,6 +177,7 @@ contract ZkMinterDelayV1 is ZkMinterV1 {
   /// @param _newMintDelay The new mint delay in seconds.
   function updateMintDelay(uint48 _newMintDelay) external virtual {
     _checkRole(DEFAULT_ADMIN_ROLE, msg.sender);
+	_revertIfClosed();
     _updateMintDelay(_newMintDelay);
   }
 
