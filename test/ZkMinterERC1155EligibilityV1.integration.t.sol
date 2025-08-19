@@ -7,12 +7,10 @@ import {ZkMinterERC1155EligibilityV1Factory} from "src/ZkMinterERC1155Eligibilit
 import {IMintable} from "src/interfaces/IMintable.sol";
 import {ZkMinterV1} from "src/ZkMinterV1.sol";
 import {FakeERC1155} from "test/fakes/FakeERC1155.sol";
-import {stdJson} from "forge-std/StdJson.sol";
 
 /// @title ZkMinterERC1155EligibilityV1Integration
 /// @notice Integration tests for ZkMinterERC1155EligibilityV1 with zk token and capped minter
 contract ZkMinterERC1155EligibilityV1Integration is ZkBaseTest {
-  ZkMinterERC1155EligibilityV1 public eligibilityMinter;
   ZkMinterERC1155EligibilityV1Factory public eligibilityFactory;
   FakeERC1155 public fakeERC1155;
 
@@ -35,114 +33,75 @@ contract ZkMinterERC1155EligibilityV1Integration is ZkBaseTest {
     vm.label(address(fakeERC1155), "FakeERC1155");
   }
 
-  function _boundToRealisticParameters(uint256 _tokenId, uint256 _balanceThreshold, uint256 _amount)
-    internal
-    pure
-    returns (uint256, uint256, uint256)
-  {
-    return (
-      bound(_tokenId, 1, 10_000), // Reasonable bounds for token ID
-      bound(_balanceThreshold, 1, 1000), // Reasonable bounds for threshold
-      _boundToRealisticAmount(_amount)
-    );
+  function _boundToRealisticThreshold(uint256 _balanceThreshold) internal pure returns (uint256) {
+    return bound(_balanceThreshold, 1, 100_000e18);
   }
 
   /// @notice Helper function to setup the eligibility minter with configurable parameters
   /// @param _tokenId The token ID to check for eligibility
   /// @param _balanceThreshold The minimum balance required for eligibility
   /// @param _saltNonce The salt nonce for deterministic deployment
-  function _setupEligibilityMinter(uint256 _tokenId, uint256 _balanceThreshold, uint256 _saltNonce) internal {
-    eligibilityMinter = ZkMinterERC1155EligibilityV1(
+  function _createEligibilityMinter(uint256 _tokenId, uint256 _balanceThreshold, uint256 _saltNonce)
+    internal
+    returns (ZkMinterERC1155EligibilityV1)
+  {
+    ZkMinterERC1155EligibilityV1 _eligibilityMinter = ZkMinterERC1155EligibilityV1(
       eligibilityFactory.createMinter(
         IMintable(address(cappedMinter)), admin, address(fakeERC1155), _tokenId, _balanceThreshold, _saltNonce
       )
     );
 
     // Grant minter role to the eligibility minter so it can mint through the cappedMinter
-    _grantMinterRole(cappedMinter, cappedMinterAdmin, address(eligibilityMinter));
+    _grantMinterRole(cappedMinter, cappedMinterAdmin, address(_eligibilityMinter));
 
-    vm.label(address(eligibilityMinter), "EligibilityMinter");
+    vm.label(address(_eligibilityMinter), "EligibilityMinter");
+    return _eligibilityMinter;
   }
 
-  function testFuzz_DeployCorrectly(uint256 _tokenId, uint256 _balanceThreshold, uint256 _saltNonce) public {
-    _tokenId = bound(_tokenId, 1, 10_000);
-    _balanceThreshold = bound(_balanceThreshold, 1, 1000);
+  function testFuzz_DeployEligibilityMinterCorrectly(uint256 _tokenId, uint256 _balanceThreshold, uint256 _saltNonce)
+    public
+  {
+    _balanceThreshold = _boundToRealisticThreshold(_balanceThreshold);
 
-    _setupEligibilityMinter(_tokenId, _balanceThreshold, _saltNonce);
+    ZkMinterERC1155EligibilityV1 _eligibilityMinter = _createEligibilityMinter(_tokenId, _balanceThreshold, _saltNonce);
 
-    assertEq(address(eligibilityMinter.ERC1155()), address(fakeERC1155));
-    assertEq(eligibilityMinter.tokenId(), _tokenId);
-    assertEq(eligibilityMinter.balanceThreshold(), _balanceThreshold);
+    assertEq(address(_eligibilityMinter.ERC1155()), address(fakeERC1155));
+    assertEq(_eligibilityMinter.tokenId(), _tokenId);
+    assertEq(_eligibilityMinter.balanceThreshold(), _balanceThreshold);
   }
 
-  function testFuzz_MintWithSufficientBalance(
+  function testFuzz_MintAboveBalanceThreshold(
     address _recipient,
     uint256 _amount,
     uint256 _tokenId,
     uint256 _balanceThreshold,
-    uint256 _saltNonce
+    uint256 _saltNonce,
+    uint256 _balance
   ) public {
     _assumeSafeAddress(_recipient);
-    (_tokenId, _balanceThreshold, _amount) = _boundToRealisticParameters(_tokenId, _balanceThreshold, _amount);
-    vm.assume(_balanceThreshold <= type(uint256).max - 1); // Prevent overflow when adding 1
-    vm.assume(_amount <= cappedMinter.CAP() / 2); // Ensure we can mint twice without exceeding cap
+    _balanceThreshold = _boundToRealisticThreshold(_balanceThreshold);
+    _balance = bound(_balance, _balanceThreshold, type(uint256).max);
+    _amount = _boundToRealisticAmount(_amount);
 
     // Warp to a valid time within the capped minter's window
     vm.warp(cappedMinter.START_TIME() + 1);
 
-    _setupEligibilityMinter(_tokenId, _balanceThreshold, _saltNonce);
+    ZkMinterERC1155EligibilityV1 _eligibilityMinter = _createEligibilityMinter(_tokenId, _balanceThreshold, _saltNonce);
 
     // Test with balance above threshold
-    fakeERC1155.setBalance(_recipient, _tokenId, _balanceThreshold + 1);
+    fakeERC1155.setBalance(_recipient, _tokenId, _balance);
 
     uint256 initialBalance = token.balanceOf(_recipient);
     uint256 initialTotalSupply = token.totalSupply();
 
     // Recipient should be able to mint
     vm.prank(_recipient);
-    eligibilityMinter.mint(_recipient, _amount);
+    _eligibilityMinter.mint(_recipient, _amount);
 
     // Verify minting occurred
     assertEq(token.balanceOf(_recipient), initialBalance + _amount);
     assertEq(token.totalSupply(), initialTotalSupply + _amount);
-
-    // Test with exact balance threshold
-    fakeERC1155.setBalance(_recipient, _tokenId, _balanceThreshold);
-
-    uint256 newInitialBalance = token.balanceOf(_recipient);
-    uint256 newInitialTotalSupply = token.totalSupply();
-
-    // Recipient should still be able to mint with exact balance
-    vm.prank(_recipient);
-    eligibilityMinter.mint(_recipient, _amount);
-
-    // Verify minting occurred again
-    assertEq(token.balanceOf(_recipient), newInitialBalance + _amount);
-    assertEq(token.totalSupply(), newInitialTotalSupply + _amount);
-  }
-
-  function testFuzz_RevertIf_MintWithInsufficientBalance(
-    address _recipient,
-    uint256 _amount,
-    uint256 _tokenId,
-    uint256 _balanceThreshold,
-    uint256 _saltNonce
-  ) public {
-    _assumeSafeAddress(_recipient);
-    (_tokenId, _balanceThreshold, _amount) = _boundToRealisticParameters(_tokenId, _balanceThreshold, _amount);
-
-    // Warp to a valid time within the capped minter's window
-    vm.warp(cappedMinter.START_TIME() + 1);
-
-    _setupEligibilityMinter(_tokenId, _balanceThreshold, _saltNonce);
-
-    // Give recipient insufficient balance
-    fakeERC1155.setBalance(_recipient, _tokenId, _balanceThreshold - 1);
-
-    // Recipient should not be able to mint
-    vm.prank(_recipient);
-    vm.expectRevert(ZkMinterERC1155EligibilityV1.ZkMinterERC1155EligibilityV1__InsufficientBalance.selector);
-    eligibilityMinter.mint(_recipient, _amount);
+    assertEq(_eligibilityMinter.isEligible(_recipient), true);
   }
 
   function testFuzz_MultipleMintsBySameUser(
@@ -156,16 +115,12 @@ contract ZkMinterERC1155EligibilityV1Integration is ZkBaseTest {
     _assumeSafeAddress(_recipient);
     _amount1 = _boundToRealisticAmount(_amount1);
     _amount2 = _boundToRealisticAmount(_amount2);
-    (_tokenId, _balanceThreshold,) = _boundToRealisticParameters(_tokenId, _balanceThreshold, 0);
-    vm.assume(_balanceThreshold <= type(uint256).max - 10); // Prevent overflow when adding 10
-
-    // Ensure the sum of amounts doesn't exceed the cap
-    vm.assume(_amount1 + _amount2 <= cappedMinter.CAP());
+    _balanceThreshold = _boundToRealisticThreshold(_balanceThreshold);
 
     // Warp to a valid time within the capped minter's window
     vm.warp(cappedMinter.START_TIME() + 1);
 
-    _setupEligibilityMinter(_tokenId, _balanceThreshold, _saltNonce);
+    ZkMinterERC1155EligibilityV1 _eligibilityMinter = _createEligibilityMinter(_tokenId, _balanceThreshold, _saltNonce);
 
     // Give recipient sufficient balance
     fakeERC1155.setBalance(_recipient, _tokenId, _balanceThreshold + 10);
@@ -175,18 +130,18 @@ contract ZkMinterERC1155EligibilityV1Integration is ZkBaseTest {
 
     // First mint
     vm.prank(_recipient);
-    eligibilityMinter.mint(_recipient, _amount1);
+    _eligibilityMinter.mint(_recipient, _amount1);
     assertEq(token.balanceOf(_recipient), initialBalance + _amount1);
     assertEq(token.totalSupply(), initialTotalSupply + _amount1);
 
     // Second mint
     vm.prank(_recipient);
-    eligibilityMinter.mint(_recipient, _amount2);
+    _eligibilityMinter.mint(_recipient, _amount2);
     assertEq(token.balanceOf(_recipient), initialBalance + _amount1 + _amount2);
     assertEq(token.totalSupply(), initialTotalSupply + _amount1 + _amount2);
   }
 
-  function testFuzz_DifferentEligibleUsers(
+  function testFuzz_MultipleMintsByDifferentUsers(
     address _recipient1,
     address _recipient2,
     uint256 _amount1,
@@ -200,16 +155,12 @@ contract ZkMinterERC1155EligibilityV1Integration is ZkBaseTest {
     vm.assume(_recipient1 != _recipient2);
     _amount1 = _boundToRealisticAmount(_amount1);
     _amount2 = _boundToRealisticAmount(_amount2);
-    (_tokenId, _balanceThreshold,) = _boundToRealisticParameters(_tokenId, _balanceThreshold, 0);
-    vm.assume(_balanceThreshold <= type(uint256).max - 1); // Prevent overflow when adding 1
-
-    // Ensure the sum of amounts doesn't exceed the cap
-    vm.assume(_amount1 + _amount2 <= cappedMinter.CAP());
+    _balanceThreshold = _boundToRealisticThreshold(_balanceThreshold);
 
     // Warp to a valid time within the capped minter's window
     vm.warp(cappedMinter.START_TIME() + 1);
 
-    _setupEligibilityMinter(_tokenId, _balanceThreshold, _saltNonce);
+    ZkMinterERC1155EligibilityV1 _eligibilityMinter = _createEligibilityMinter(_tokenId, _balanceThreshold, _saltNonce);
 
     // Give both recipients sufficient balance
     fakeERC1155.setBalance(_recipient1, _tokenId, _balanceThreshold + 1);
@@ -221,20 +172,20 @@ contract ZkMinterERC1155EligibilityV1Integration is ZkBaseTest {
 
     // Recipient1 mints
     vm.prank(_recipient1);
-    eligibilityMinter.mint(_recipient1, _amount1);
+    _eligibilityMinter.mint(_recipient1, _amount1);
     assertEq(token.balanceOf(_recipient1), initialBalance1 + _amount1);
     assertEq(token.balanceOf(_recipient2), initialBalance2);
     assertEq(token.totalSupply(), initialTotalSupply + _amount1);
 
     // Recipient2 mints
     vm.prank(_recipient2);
-    eligibilityMinter.mint(_recipient2, _amount2);
+    _eligibilityMinter.mint(_recipient2, _amount2);
     assertEq(token.balanceOf(_recipient1), initialBalance1 + _amount1);
     assertEq(token.balanceOf(_recipient2), initialBalance2 + _amount2);
     assertEq(token.totalSupply(), initialTotalSupply + _amount1 + _amount2);
   }
 
-  function testFuzz_MintWhenUserBalanceChanges(
+  function testFuzz_MintAfterMinterIsPaused(
     address _recipient,
     uint256 _amount,
     uint256 _tokenId,
@@ -242,218 +193,41 @@ contract ZkMinterERC1155EligibilityV1Integration is ZkBaseTest {
     uint256 _saltNonce
   ) public {
     _assumeSafeAddress(_recipient);
-    (_tokenId, _balanceThreshold, _amount) = _boundToRealisticParameters(_tokenId, _balanceThreshold, _amount);
-    vm.assume(_balanceThreshold <= type(uint256).max - 1); // Prevent overflow when adding 1
+    _balanceThreshold = _boundToRealisticThreshold(_balanceThreshold);
+    _amount = _boundToRealisticAmount(_amount);
 
     // Warp to a valid time within the capped minter's window
     vm.warp(cappedMinter.START_TIME() + 1);
 
-    _setupEligibilityMinter(_tokenId, _balanceThreshold, _saltNonce);
-
-    // Give recipient sufficient balance initially
-    fakeERC1155.setBalance(_recipient, _tokenId, _balanceThreshold + 1);
-
-    uint256 initialBalance = token.balanceOf(_recipient);
-    uint256 initialTotalSupply = token.totalSupply();
-
-    // Recipient should be able to mint
-    vm.prank(_recipient);
-    eligibilityMinter.mint(_recipient, _amount);
-    assertEq(token.balanceOf(_recipient), initialBalance + _amount);
-    assertEq(token.totalSupply(), initialTotalSupply + _amount);
-
-    // Now reduce recipient's balance below threshold
-    fakeERC1155.setBalance(_recipient, _tokenId, _balanceThreshold - 1);
-
-    // Recipient should not be able to mint anymore
-    vm.prank(_recipient);
-    vm.expectRevert(ZkMinterERC1155EligibilityV1.ZkMinterERC1155EligibilityV1__InsufficientBalance.selector);
-    eligibilityMinter.mint(_recipient, _amount);
-  }
-
-  function testFuzz_EligibilityCheck(
-    address _recipient,
-    uint256 _balance,
-    uint256 _tokenId,
-    uint256 _balanceThreshold,
-    uint256 _saltNonce
-  ) public {
-    _assumeSafeAddress(_recipient);
-    (_tokenId, _balanceThreshold,) = _boundToRealisticParameters(_tokenId, _balanceThreshold, 0);
-    vm.assume(_balance <= type(uint256).max - _balanceThreshold); // Prevent overflow
-
-    _setupEligibilityMinter(_tokenId, _balanceThreshold, _saltNonce);
-
-    // Set recipient's balance
-    fakeERC1155.setBalance(_recipient, _tokenId, _balance);
-
-    bool shouldBeEligible = _balance >= _balanceThreshold;
-    assertEq(eligibilityMinter.isEligible(_recipient), shouldBeEligible);
-  }
-
-  function testFuzz_MintWithDifferentThresholds(
-    address _recipient,
-    uint256 _amount,
-    uint256 _threshold,
-    uint256 _tokenId,
-    uint256 _saltNonce
-  ) public {
-    _assumeSafeAddress(_recipient);
-    (_tokenId, _threshold, _amount) = _boundToRealisticParameters(_tokenId, _threshold, _amount);
-    vm.assume(_threshold <= type(uint256).max - 5); // Prevent overflow when adding 5
-
-    // Warp to a valid time within the capped minter's window
-    vm.warp(cappedMinter.START_TIME() + 1);
-
-    // Setup with new threshold
-    _setupEligibilityMinter(_tokenId, _threshold, _saltNonce);
-
-    uint256 userBalance = _threshold + 5;
-    fakeERC1155.setBalance(_recipient, _tokenId, userBalance);
-
-    uint256 initialBalance = token.balanceOf(_recipient);
-    uint256 initialTotalSupply = token.totalSupply();
-
-    vm.prank(_recipient);
-    eligibilityMinter.mint(_recipient, _amount);
-
-    assertEq(token.balanceOf(_recipient), initialBalance + _amount);
-    assertEq(token.totalSupply(), initialTotalSupply + _amount);
-  }
-
-  function testFuzz_MintWithDifferentTokenIds(
-    address _recipient,
-    uint256 _amount,
-    uint256 _tokenId,
-    uint256 _balanceThreshold,
-    uint256 _saltNonce
-  ) public {
-    _assumeSafeAddress(_recipient);
-    (_tokenId, _balanceThreshold, _amount) = _boundToRealisticParameters(_tokenId, _balanceThreshold, _amount);
-    vm.assume(_balanceThreshold <= type(uint256).max - 1); // Prevent overflow when adding 1
-
-    // Warp to a valid time within the capped minter's window
-    vm.warp(cappedMinter.START_TIME() + 1);
-
-    // Setup with new token ID
-    _setupEligibilityMinter(_tokenId, _balanceThreshold, _saltNonce);
-
-    fakeERC1155.setBalance(_recipient, _tokenId, _balanceThreshold + 1);
-
-    uint256 initialBalance = token.balanceOf(_recipient);
-    uint256 initialTotalSupply = token.totalSupply();
-
-    vm.prank(_recipient);
-    eligibilityMinter.mint(_recipient, _amount);
-
-    assertEq(token.balanceOf(_recipient), initialBalance + _amount);
-    assertEq(token.totalSupply(), initialTotalSupply + _amount);
-  }
-
-  // Comprehensive fuzzing for both token ID and threshold together
-  function testFuzz_MintWithDifferentTokenIdAndThreshold(
-    address _recipient,
-    uint256 _amount,
-    uint256 _tokenId,
-    uint256 _threshold,
-    uint256 _saltNonce
-  ) public {
-    _assumeSafeAddress(_recipient);
-    (_tokenId, _threshold, _amount) = _boundToRealisticParameters(_tokenId, _threshold, _amount);
-    vm.assume(_threshold <= type(uint256).max - 5); // Prevent overflow when adding 5
-
-    // Warp to a valid time within the capped minter's window
-    vm.warp(cappedMinter.START_TIME() + 1);
-
-    // Setup with new token ID and threshold
-    _setupEligibilityMinter(_tokenId, _threshold, _saltNonce);
-
-    uint256 userBalance = _threshold + 5;
-    fakeERC1155.setBalance(_recipient, _tokenId, userBalance);
-
-    uint256 initialBalance = token.balanceOf(_recipient);
-    uint256 initialTotalSupply = token.totalSupply();
-
-    vm.prank(_recipient);
-    eligibilityMinter.mint(_recipient, _amount);
-
-    assertEq(token.balanceOf(_recipient), initialBalance + _amount);
-    assertEq(token.totalSupply(), initialTotalSupply + _amount);
-  }
-
-  // Test threshold boundary conditions
-  function testFuzz_ThresholdBoundaryConditions(
-    address _recipient,
-    uint256 _threshold,
-    uint256 _tokenId,
-    uint256 _saltNonce
-  ) public {
-    _assumeSafeAddress(_recipient);
-    (_tokenId, _threshold,) = _boundToRealisticParameters(_tokenId, _threshold, 0);
-    vm.assume(_threshold <= type(uint256).max - 1); // Prevent overflow when adding 1
-
-    // Warp to a valid time within the capped minter's window
-    vm.warp(cappedMinter.START_TIME() + 1);
-
-    // Setup with new threshold
-    _setupEligibilityMinter(_tokenId, _threshold, _saltNonce);
-
-    // Test with balance exactly at threshold
-    fakeERC1155.setBalance(_recipient, _tokenId, _threshold);
-    assertTrue(eligibilityMinter.isEligible(_recipient));
-
-    // Test with balance just below threshold
-    fakeERC1155.setBalance(_recipient, _tokenId, _threshold - 1);
-    assertFalse(eligibilityMinter.isEligible(_recipient));
-
-    // Test with balance just above threshold
-    fakeERC1155.setBalance(_recipient, _tokenId, _threshold + 1);
-    assertTrue(eligibilityMinter.isEligible(_recipient));
-  }
-
-  function testFuzz_MintAfterPauseAndResume(
-    address _recipient,
-    uint256 _amount,
-    uint256 _tokenId,
-    uint256 _balanceThreshold,
-    uint256 _saltNonce
-  ) public {
-    _assumeSafeAddress(_recipient);
-    (_tokenId, _balanceThreshold, _amount) = _boundToRealisticParameters(_tokenId, _balanceThreshold, _amount);
-    vm.assume(_balanceThreshold <= type(uint256).max - 1); // Prevent overflow when adding 1
-
-    // Warp to a valid time within the capped minter's window
-    vm.warp(cappedMinter.START_TIME() + 1);
-
-    _setupEligibilityMinter(_tokenId, _balanceThreshold, _saltNonce);
+    ZkMinterERC1155EligibilityV1 _eligibilityMinter = _createEligibilityMinter(_tokenId, _balanceThreshold, _saltNonce);
 
     fakeERC1155.setBalance(_recipient, _tokenId, _balanceThreshold + 1);
 
     // Pause the eligibility minter
     vm.prank(admin);
-    eligibilityMinter.pause();
+    _eligibilityMinter.pause();
 
     // Try to mint while paused (should fail)
     vm.prank(_recipient);
     vm.expectRevert("Pausable: paused");
-    eligibilityMinter.mint(_recipient, _amount);
+    _eligibilityMinter.mint(_recipient, _amount);
 
     // Unpause
     vm.prank(admin);
-    eligibilityMinter.unpause();
+    _eligibilityMinter.unpause();
 
     // Now minting should work
     uint256 initialBalance = token.balanceOf(_recipient);
     uint256 initialTotalSupply = token.totalSupply();
 
     vm.prank(_recipient);
-    eligibilityMinter.mint(_recipient, _amount);
+    _eligibilityMinter.mint(_recipient, _amount);
 
     assertEq(token.balanceOf(_recipient), initialBalance + _amount);
     assertEq(token.totalSupply(), initialTotalSupply + _amount);
   }
 
-  function testFuzz_RevertIf_MintAfterContractClosed(
+  function testFuzz_RevertIf_BelowTheBalanceThreshold(
     address _recipient,
     uint256 _amount,
     uint256 _tokenId,
@@ -461,23 +235,50 @@ contract ZkMinterERC1155EligibilityV1Integration is ZkBaseTest {
     uint256 _saltNonce
   ) public {
     _assumeSafeAddress(_recipient);
-    (_tokenId, _balanceThreshold, _amount) = _boundToRealisticParameters(_tokenId, _balanceThreshold, _amount);
-    vm.assume(_balanceThreshold <= type(uint256).max - 1); // Prevent overflow when adding 1
+    _balanceThreshold = _boundToRealisticThreshold(_balanceThreshold);
+    _amount = _boundToRealisticAmount(_amount);
 
     // Warp to a valid time within the capped minter's window
     vm.warp(cappedMinter.START_TIME() + 1);
 
-    _setupEligibilityMinter(_tokenId, _balanceThreshold, _saltNonce);
+    ZkMinterERC1155EligibilityV1 _eligibilityMinter = _createEligibilityMinter(_tokenId, _balanceThreshold, _saltNonce);
+
+    // Give recipient insufficient balance
+    fakeERC1155.setBalance(_recipient, _tokenId, _balanceThreshold - 1);
+
+    assertEq(_eligibilityMinter.isEligible(_recipient), false);
+
+    // Recipient should not be able to mint
+    vm.prank(_recipient);
+    vm.expectRevert(ZkMinterERC1155EligibilityV1.ZkMinterERC1155EligibilityV1__InsufficientBalance.selector);
+    _eligibilityMinter.mint(_recipient, _amount);
+  }
+
+  function testFuzz_RevertIf_MinterClosed(
+    address _recipient,
+    uint256 _amount,
+    uint256 _tokenId,
+    uint256 _balanceThreshold,
+    uint256 _saltNonce
+  ) public {
+    _assumeSafeAddress(_recipient);
+    _balanceThreshold = _boundToRealisticThreshold(_balanceThreshold);
+    _amount = _boundToRealisticAmount(_amount);
+
+    // Warp to a valid time within the capped minter's window
+    vm.warp(cappedMinter.START_TIME() + 1);
+
+    ZkMinterERC1155EligibilityV1 _eligibilityMinter = _createEligibilityMinter(_tokenId, _balanceThreshold, _saltNonce);
 
     fakeERC1155.setBalance(_recipient, _tokenId, _balanceThreshold + 1);
 
     // Close the contract
     vm.prank(admin);
-    eligibilityMinter.close();
+    _eligibilityMinter.close();
 
     // Try to mint after contract is closed (should fail)
     vm.prank(_recipient);
     vm.expectRevert(abi.encodeWithSelector(ZkMinterV1.ZkMinter__ContractClosed.selector));
-    eligibilityMinter.mint(_recipient, _amount);
+    _eligibilityMinter.mint(_recipient, _amount);
   }
 }
