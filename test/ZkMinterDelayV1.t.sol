@@ -43,7 +43,7 @@ contract Constructor is ZkMinterDelayV1Test {
     assertEq(address(_minterDelay.mintable()), address(_mintable));
     assertTrue(_minterDelay.hasRole(_minterDelay.DEFAULT_ADMIN_ROLE(), _admin));
     assertEq(_minterDelay.mintDelay(), _mintDelay);
-    assertEq(_minterDelay.nextMintRequestId(), 0);
+    assertEq(_minterDelay.nextMintRequestId(), 1);
   }
 
   function testFuzz_EmitsMinterDelayUpdatedEvent(IMintable _mintable, address _admin, uint48 _mintDelay) public {
@@ -107,7 +107,7 @@ contract Mint is ZkMinterDelayV1Test {
     _amount = _boundToRealisticAmount(_amount);
 
     vm.expectEmit();
-    emit ZkMinterDelayV1.MintRequested(1, uint48(block.timestamp));
+    emit ZkMinterDelayV1.MintRequested(1, _to, _amount, uint48(block.timestamp) + MINT_DELAY);
 
     vm.prank(minter);
     minterDelay.mint(_to, _amount);
