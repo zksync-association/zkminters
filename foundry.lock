@@ -1,0 +1,17 @@
+{
+  "lib/openzeppelin-contracts": {
+    "rev": "dc44c9f1a4c3b10af99492eed84f83ed244203f6"
+  },
+  "lib/forge-std": {
+    "rev": "77041d2ce690e692d6e03cc812b57d1ddaa4d505"
+  },
+  "lib/openzeppelin-contracts-upgradeable": {
+    "rev": "2d081f24cac1a867f6f73d512f2022e1fa987854"
+  },
+  "lib/zk-governance": {
+    "rev": "36f7d4e19e586fb539f4c8723e28e52b5864fb8e"
+  },
+  "lib/era-contracts": {
+    "rev": "0ad33ba83c1e27e9a78f6f1501ee7ac87eb831e2"
+  }
+}

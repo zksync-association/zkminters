@@ -13,12 +13,6 @@ import {IMintable} from "src/interfaces/IMintable.sol";
 /// supports two deployment methods:
 /// - Standard deployment with explicit parameters
 /// - Unified deployment with encoded parameters for multi-factory compatibility
-/// @dev ZkMinterERC1155EligibilityV1 deployment flow:
-/// 1. Call createMinter() with mintable, admin, erc1155, tokenId, balanceThreshold, and salt nonce
-/// 2. Factory calculates salt using chain ID + nonce and creates a new ZkMinterERC1155EligibilityV1 contract using
-/// CREATE2
-/// 3. Event emitted with deployment details
-/// 4. Address can be predicted using getMinter() before deployment
 /// @custom:security-contact security@matterlabs.dev
 contract ZkMinterERC1155EligibilityV1Factory is IZkMinterV1Factory {
   /*///////////////////////////////////////////////////////////////

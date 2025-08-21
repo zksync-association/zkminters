@@ -7,7 +7,7 @@ import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 
 /// @title ZkMinterERC1155EligibilityV1
 /// @author [ScopeLift](https://scopelift.co)
-/// @notice A contract that extends `ZkMinterV1` to support ERC1155-based minting. This contract allows minting
+/// @notice A contract that extends `ZkMinterV1` to support ERC1155 gated minting. This contract allows minting
 /// tokens to a specified address if they meet the ERC1155 balance threshold. The contract provides:
 /// - ERC1155 balance verification for minting eligibility
 /// - Configurable token ID and balance threshold requirements
@@ -35,9 +35,6 @@ contract ZkMinterERC1155EligibilityV1 is ZkMinterV1 {
   /// @notice Error for when the balance threshold is zero.
   error ZkMinterERC1155EligibilityV1__InvalidBalanceThreshold();
 
-  /// @notice Error for when the amount is zero.
-  error ZkMinterERC1155EligibilityV1__InvalidAmount();
-
   /// @notice Error for when the caller has an insufficient balance.
   error ZkMinterERC1155EligibilityV1__InsufficientBalance();
 
@@ -58,12 +55,12 @@ contract ZkMinterERC1155EligibilityV1 is ZkMinterV1 {
                           Constructor
   //////////////////////////////////////////////////////////////*/
 
-  /// @notice Initializes the contract with the mintable contract, admin, erc1155 contract, token id, and balance
+  /// @notice Initializes the contract with the mintable contract, admin, ERC1155 contract, token id, and balance
   /// threshold.
   /// @param _mintable A contract used as a target when calling mint. Any contract that conforms to the IMintable
   /// interface can be used, but in most cases this will be another `ZKMinter` extension or `ZKCappedMinter`.
   /// @param _admin The address that will have admin privileges.
-  /// @param _erc1155 The ERC1155 contract to use for minting.
+  /// @param _erc1155 The ERC1155 contract to use for eligibility checks.
   /// @param _tokenId The token id for the ERC1155 contract.
   /// @param _balanceThreshold The balance threshold for the ERC1155 contract. Must be non-zero.
   constructor(IMintable _mintable, address _admin, address _erc1155, uint256 _tokenId, uint256 _balanceThreshold) {
@@ -109,6 +106,7 @@ contract ZkMinterERC1155EligibilityV1 is ZkMinterV1 {
   /// @param _tokenId The new token id to set.
   /// @dev Used in `erc1155.balanceOf(_caller, tokenId)` for eligibility checks.
   function updateTokenId(uint256 _tokenId) external virtual {
+    _revertIfClosed();
     _checkRole(DEFAULT_ADMIN_ROLE, msg.sender);
     _updateTokenId(_tokenId);
   }
@@ -117,6 +115,7 @@ contract ZkMinterERC1155EligibilityV1 is ZkMinterV1 {
   /// @param _balanceThreshold The new balance threshold to set. Must be non-zero.
   /// @dev This is the minimum balance that must be held by the caller to mint.
   function updateBalanceThreshold(uint256 _balanceThreshold) external virtual {
+    _revertIfClosed();
     _checkRole(DEFAULT_ADMIN_ROLE, msg.sender);
     _updateBalanceThreshold(_balanceThreshold);
   }
