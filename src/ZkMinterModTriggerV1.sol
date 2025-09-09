@@ -1,105 +1,88 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import "src/interfaces/IZkCappedMinter.sol";
+import {IMintable} from "src/interfaces/IMintable.sol";
+import {ZkMinterV1} from "src/ZkMinterV1.sol";
 
-contract ZkMinterModTriggerV1 {
-  IZkCappedMinter public minter; // The ZkCappedMinter for which this project
-  address public admin; // The address that can change everything
-  address[] public targets; // The target contract to call
-  bytes[] public functionSignatures; // The function signature to execute (e.g., function selector)
-  bytes[] public callDatas; // The call data for the function
+/// @title ZkMinterModTriggerV1
+/// @author [ScopeLift](https://scopelift.co)
+/// @notice A contract that enables minting tokens and triggering external function calls.
+/// @custom:security-contact security@matterlabs.dev
+contract ZkMinterModTriggerV1 is ZkMinterV1 {
+  /// @notice The target contracts to call when trigger is executed.
+  address[] public targets;
 
-  modifier adminOnly() {
-    require(msg.sender == admin, "Only admin can call this");
-    _;
-  }
+  /// @notice The call data for the functions.
+  bytes[] public callDatas;
 
-  constructor(
-    address _admin,
-    address[] memory _targetAddresses,
-    bytes[] memory _functionSignatures,
-    bytes[] memory _callDatas
-  ) {
-    require(
-      _targetAddresses.length == _functionSignatures.length && _functionSignatures.length == _callDatas.length,
-      "Array lengths must match"
-    );
+  /// @notice Emitted when trigger is executed.
+  event TriggerExecuted(address indexed caller, uint256 callsExecuted);
 
-    admin = _admin;
+  /// @notice Error for when a function call fails.
+  error ZkMinterModTriggerV1__TriggerCallFailed(uint256 index, address target);
+
+  /// @notice Error for when the admin is the zero address.
+  error ZkMinterModTriggerV1__InvalidAdmin();
+
+  /// @notice Error for when the mintable is the zero address.
+  error ZkMinterModTriggerV1__InvalidMintable();
+
+  /// @notice Error for when array lengths don't match.
+  error ZkMinterModTriggerV1__ArrayLengthMismatch();
+
+  /// @notice Initializes the trigger contract with mintable, admin, and trigger parameters.
+  /// @param _mintable A contract used as a target when calling mint.
+  /// @param _admin The address that will have admin privileges.
+  /// @param _targetAddresses The target contracts to call.
+  /// @param _callDatas The call data for the functions.
+  constructor(IMintable _mintable, address _admin, address[] memory _targetAddresses, bytes[] memory _callDatas) {
+    if (address(_mintable) == address(0)) {
+      revert ZkMinterModTriggerV1__InvalidMintable();
+    }
+
+    if (_admin == address(0)) {
+      revert ZkMinterModTriggerV1__InvalidAdmin();
+    }
+
+    if (_targetAddresses.length != _callDatas.length) {
+      revert ZkMinterModTriggerV1__ArrayLengthMismatch();
+    }
+
+    _updateMintable(_mintable);
+    _grantRole(DEFAULT_ADMIN_ROLE, _admin);
+    _grantRole(PAUSER_ROLE, _admin);
+
     targets = _targetAddresses;
-    functionSignatures = _functionSignatures;
     callDatas = _callDatas;
   }
 
-  function setMinter(address _minter) external adminOnly {
-    minter = IZkCappedMinter(_minter);
+  /// @notice Mints tokens to this contract address.
+  /// @param _amount The quantity of tokens that will be minted.
+  /// @dev Only callable by addresses with the MINTER_ROLE. Tokens are always minted to address(this).
+  /// @dev The first parameter is kept for interface compliance but ignored.
+  function mint(address, /* _to */ uint256 _amount) external {
+    _revertIfClosed();
+    _requireNotPaused();
+    _checkRole(MINTER_ROLE, msg.sender);
+
+    mintable.mint(address(this), _amount);
+    emit Minted(msg.sender, address(this), _amount);
   }
 
-  function setTargets(address[] calldata _targets) external adminOnly {
-    targets = _targets;
-  }
+  /// @notice Executes all configured trigger calls.
+  /// @dev Only callable by addresses with the MINTER_ROLE.
+  function trigger() external {
+    _revertIfClosed();
+    _requireNotPaused();
+    _checkRole(MINTER_ROLE, msg.sender);
 
-  function setAdmin(address _admin) external adminOnly {
-    admin = _admin;
-  }
-
-  function setFunctionSignatures(bytes[] calldata _functionSignatures) external adminOnly {
-    // Manually copy to avoid nested calldata issues
-    bytes[] memory newSignatures = new bytes[](_functionSignatures.length);
-    for (uint256 i = 0; i < _functionSignatures.length; i++) {
-      newSignatures[i] = _functionSignatures[i];
-    }
-    functionSignatures = newSignatures;
-  }
-
-  function setCallDatas(bytes[] calldata _callDatas) external adminOnly {
-    // Manually copy to avoid nested calldata issues
-    bytes[] memory newCallDatas = new bytes[](_callDatas.length);
-    for (uint256 i = 0; i < _callDatas.length; i++) {
-      newCallDatas[i] = _callDatas[i];
-    }
-    callDatas = newCallDatas;
-  }
-
-  // Function to set all call parameters at once
-  function setCallParameters(
-    address[] calldata _targets,
-    bytes[] calldata _functionSignatures,
-    bytes[] calldata _callDatas
-  ) external adminOnly {
-    require(
-      _targets.length == _functionSignatures.length && _functionSignatures.length == _callDatas.length,
-      "Array lengths must match"
-    );
-    targets = _targets;
-
-    // Manually copy to avoid nested calldata issues
-    bytes[] memory newSignatures = new bytes[](_functionSignatures.length);
-    bytes[] memory newCallDatas = new bytes[](_callDatas.length);
-    for (uint256 i = 0; i < _functionSignatures.length; i++) {
-      newSignatures[i] = _functionSignatures[i];
-      newCallDatas[i] = _callDatas[i];
-    }
-    functionSignatures = newSignatures;
-    callDatas = newCallDatas;
-  }
-
-  // Function to approve and call with arbitrary calldata
-  function mint(uint256 _amount) external {
-    minter.mint(address(this), _amount);
-
-    require(
-      targets.length == functionSignatures.length && functionSignatures.length == callDatas.length,
-      "Array lengths must match"
-    );
-
-    // Iterate through all targets and execute calls
     for (uint256 i = 0; i < targets.length; i++) {
-      // Combine function signature with provided callData
-      bytes memory fullCallData = abi.encodePacked(functionSignatures[i], callDatas[i]);
-      (bool success,) = targets[i].call(fullCallData);
-      require(success, "Function call failed");
+      (bool success,) = targets[i].call(callDatas[i]);
+      if (!success) {
+        revert ZkMinterModTriggerV1__TriggerCallFailed(i, targets[i]);
+      }
     }
+
+    emit TriggerExecuted(msg.sender, targets.length);
   }
 }
