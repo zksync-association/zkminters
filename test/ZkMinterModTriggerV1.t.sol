@@ -12,6 +12,7 @@ contract ZkMinterModTriggerV1Test is ZkCappedMinterV2Test {
   IMintable public mintable;
   MockTargetContract public mockTarget;
   address public caller = makeAddr("caller");
+  address public recoveryAddress;
 
   address[] public targets;
   bytes[] public calldatas;
@@ -21,6 +22,7 @@ contract ZkMinterModTriggerV1Test is ZkCappedMinterV2Test {
     super.setUp();
     mintable = IMintable(address(cappedMinter));
     mockTarget = new MockTargetContract();
+    recoveryAddress = makeAddr("recovery");
 
     targets = new address[](1);
     targets[0] = address(mockTarget);
@@ -31,7 +33,7 @@ contract ZkMinterModTriggerV1Test is ZkCappedMinterV2Test {
     values = new uint256[](1);
     values[0] = 1 ether;
 
-    minterTrigger = new ZkMinterModTriggerV1(mintable, admin, targets, calldatas, values);
+    minterTrigger = new ZkMinterModTriggerV1(mintable, admin, targets, calldatas, values, recoveryAddress);
     _grantMinterRole(cappedMinter, cappedMinterAdmin, address(minterTrigger));
   }
 
@@ -47,6 +49,7 @@ contract ZkMinterModTriggerV1Test is ZkCappedMinterV2Test {
     assertEq(minterTrigger.targets(0), address(mockTarget));
     assertEq(minterTrigger.calldatas(0), abi.encodeWithSelector(mockTarget.setValue.selector, 42));
     assertEq(minterTrigger.values(0), 1 ether);
+    assertEq(minterTrigger.recoveryAddress(), recoveryAddress);
   }
 }
 
@@ -54,13 +57,14 @@ contract Constructor is ZkMinterModTriggerV1Test {
   function testFuzz_InitializesMinterTriggerCorrectly(
     IMintable _mintable,
     address _admin,
+    address _recovery,
     uint256 _setValue,
     uint256 _value,
     address _target2,
     bytes memory _calldatas2,
     uint256 _value2
   ) public {
-    vm.assume(_admin != address(0));
+    vm.assume(_admin != address(0) && _recovery != address(0));
 
     MockTargetContract _mockTarget = new MockTargetContract();
     address[] memory _targets = new address[](2);
@@ -75,7 +79,8 @@ contract Constructor is ZkMinterModTriggerV1Test {
     _values[0] = _value;
     _values[1] = _value2;
 
-    ZkMinterModTriggerV1 _minterTrigger = new ZkMinterModTriggerV1(_mintable, _admin, _targets, _calldatas, _values);
+    ZkMinterModTriggerV1 _minterTrigger =
+      new ZkMinterModTriggerV1(_mintable, _admin, _targets, _calldatas, _values, _recovery);
 
     assertEq(address(_minterTrigger.mintable()), address(_mintable));
     assertTrue(_minterTrigger.hasRole(_minterTrigger.DEFAULT_ADMIN_ROLE(), _admin));
@@ -85,6 +90,7 @@ contract Constructor is ZkMinterModTriggerV1Test {
     assertEq(_minterTrigger.calldatas(1), _calldatas2);
     assertEq(_minterTrigger.values(0), _value);
     assertEq(_minterTrigger.values(1), _value2);
+    assertEq(_minterTrigger.recoveryAddress(), _recovery);
     vm.expectRevert(bytes(""));
     _minterTrigger.values(2);
   }
@@ -100,7 +106,7 @@ contract Constructor is ZkMinterModTriggerV1Test {
     _values[0] = 100 ether;
 
     vm.expectRevert(ZkMinterModTriggerV1.ZkMinterModTriggerV1__InvalidAdmin.selector);
-    new ZkMinterModTriggerV1(_mintable, address(0), _targets, _calldatas, _values);
+    new ZkMinterModTriggerV1(_mintable, address(0), _targets, _calldatas, _values, recoveryAddress);
   }
 
   function test_RevertIf_ArrayLengthMismatch() public {
@@ -115,7 +121,21 @@ contract Constructor is ZkMinterModTriggerV1Test {
     _values[0] = 100 ether;
 
     vm.expectRevert(ZkMinterModTriggerV1.ZkMinterModTriggerV1__ArrayLengthMismatch.selector);
-    new ZkMinterModTriggerV1(mintable, admin, _targets, _calldatas, _values);
+    new ZkMinterModTriggerV1(mintable, admin, _targets, _calldatas, _values, recoveryAddress);
+  }
+
+  function test_RevertIf_RecoveryAddressIsZero() public {
+    address[] memory _targets = new address[](1);
+    _targets[0] = address(mockTarget);
+
+    bytes[] memory _callDatas = new bytes[](1);
+    _callDatas[0] = abi.encodeWithSelector(mockTarget.setValue.selector, 42);
+
+    uint256[] memory _values = new uint256[](1);
+    _values[0] = 100 ether;
+
+    vm.expectRevert(ZkMinterModTriggerV1.ZkMinterModTriggerV1__InvalidRecoveryAddress.selector);
+    new ZkMinterModTriggerV1(mintable, admin, _targets, _callDatas, _values, address(0));
   }
 }
 
@@ -243,7 +263,8 @@ contract Trigger is ZkMinterModTriggerV1Test {
 
     vm.deal(address(caller), _value1 + _value2);
 
-    ZkMinterModTriggerV1 multiTrigger = new ZkMinterModTriggerV1(mintable, admin, _targets, _calldatas, _values);
+    ZkMinterModTriggerV1 multiTrigger =
+      new ZkMinterModTriggerV1(mintable, admin, _targets, _calldatas, _values, recoveryAddress);
 
     vm.prank(admin);
     multiTrigger.grantRole(MINTER_ROLE, caller);
@@ -294,7 +315,8 @@ contract Trigger is ZkMinterModTriggerV1Test {
     uint256[] memory _values = new uint256[](1);
     _values[0] = 100 ether;
 
-    ZkMinterModTriggerV1 failTrigger = new ZkMinterModTriggerV1(mintable, admin, _targets, _calldatas, _values);
+    ZkMinterModTriggerV1 failTrigger =
+      new ZkMinterModTriggerV1(mintable, admin, _targets, _calldatas, _values, recoveryAddress);
 
     vm.prank(admin);
     failTrigger.grantRole(MINTER_ROLE, caller);
@@ -420,7 +442,8 @@ contract MintAndTrigger is ZkMinterModTriggerV1Test {
     uint256[] memory _values = new uint256[](1);
     _values[0] = _ethValue;
 
-    ZkMinterModTriggerV1 failTrigger = new ZkMinterModTriggerV1(mintable, admin, _targets, _calldatas, _values);
+    ZkMinterModTriggerV1 failTrigger =
+      new ZkMinterModTriggerV1(mintable, admin, _targets, _calldatas, _values, recoveryAddress);
 
     // Allow failTrigger to mint on the underlying cappedMinter and grant a caller minter role.
     _grantMinterRole(cappedMinter, cappedMinterAdmin, address(failTrigger));
@@ -460,7 +483,8 @@ contract MintAndTrigger is ZkMinterModTriggerV1Test {
     _values[0] = 0;
     _values[1] = _ethValue;
 
-    ZkMinterModTriggerV1 multiTrigger = new ZkMinterModTriggerV1(mintable, admin, _targets, _calldatas, _values);
+    ZkMinterModTriggerV1 multiTrigger =
+      new ZkMinterModTriggerV1(mintable, admin, _targets, _calldatas, _values, recoveryAddress);
 
     // Set up role.
     _grantMinterRole(cappedMinter, cappedMinterAdmin, address(multiTrigger));
@@ -481,5 +505,76 @@ contract MintAndTrigger is ZkMinterModTriggerV1Test {
     // Verify token transfer from trigger to recipient.
     assertEq(token.balanceOf(address(multiTrigger)), 0);
     assertEq(token.balanceOf(_recipient), _amount);
+  }
+}
+
+contract RecoverTokens is ZkMinterModTriggerV1Test {
+  address public minter = makeAddr("minter");
+
+  function setUp() public override {
+    super.setUp();
+    vm.prank(admin);
+    minterTrigger.grantRole(MINTER_ROLE, minter);
+  }
+
+  function testFuzz_SendsTokensToRecoveryAddress(uint256 _amount) public {
+    _amount = bound(_amount, 1, cappedMinter.CAP());
+    vm.prank(minter);
+    minterTrigger.mint(address(minterTrigger), _amount);
+
+    vm.prank(admin);
+    minterTrigger.recoverTokens(address(token), _amount);
+
+    assertEq(token.balanceOf(address(minterTrigger)), 0);
+    assertEq(token.balanceOf(recoveryAddress), _amount);
+  }
+
+  function testFuzz_EmitsTokensRecoveredEvent(uint256 _amount) public {
+    _amount = bound(_amount, 1, cappedMinter.CAP());
+    vm.prank(minter);
+    minterTrigger.mint(address(minterTrigger), _amount);
+
+    vm.prank(admin);
+    vm.expectEmit();
+    emit ZkMinterModTriggerV1.TokensRecovered(admin, address(token), _amount, recoveryAddress);
+    minterTrigger.recoverTokens(address(token), _amount);
+  }
+
+  function testFuzz_RevertIf_NotAdmin(address _nonAdmin, uint256 _amount) public {
+    vm.assume(_nonAdmin != admin);
+
+    _amount = bound(_amount, 1, cappedMinter.CAP());
+    vm.prank(minter);
+    minterTrigger.mint(address(minterTrigger), _amount);
+
+    vm.prank(_nonAdmin);
+    vm.expectRevert(_formatAccessControlError(_nonAdmin, DEFAULT_ADMIN_ROLE));
+    minterTrigger.recoverTokens(address(token), _amount);
+  }
+
+  function testFuzz_RevertIf_Paused(uint256 _amount) public {
+    _amount = bound(_amount, 1, cappedMinter.CAP());
+    vm.prank(minter);
+    minterTrigger.mint(address(minterTrigger), _amount);
+
+    vm.prank(admin);
+    minterTrigger.pause();
+
+    vm.prank(admin);
+    vm.expectRevert("Pausable: paused");
+    minterTrigger.recoverTokens(address(token), _amount);
+  }
+
+  function testFuzz_RevertIf_Closed(uint256 _amount) public {
+    _amount = bound(_amount, 1, cappedMinter.CAP());
+    vm.prank(minter);
+    minterTrigger.mint(address(minterTrigger), _amount);
+
+    vm.prank(admin);
+    minterTrigger.close();
+
+    vm.prank(admin);
+    vm.expectRevert(ZkMinterV1.ZkMinter__ContractClosed.selector);
+    minterTrigger.recoverTokens(address(token), _amount);
   }
 }

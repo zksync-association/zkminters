@@ -30,7 +30,8 @@ contract ZkMinterModTriggerV1Integration is ZkMinterModTriggerV1Test {
     _values[0] = 0;
     _values[1] = _ethValue;
 
-    ZkMinterModTriggerV1 _multiTrigger = new ZkMinterModTriggerV1(mintable, admin, _targets, _calldatas, _values);
+    ZkMinterModTriggerV1 _multiTrigger =
+      new ZkMinterModTriggerV1(mintable, admin, _targets, _calldatas, _values, recoveryAddress);
 
     // Configure roles
     _grantMinterRole(cappedMinter, cappedMinterAdmin, address(_multiTrigger));
