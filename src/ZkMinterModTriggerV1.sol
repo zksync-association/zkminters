@@ -24,7 +24,7 @@ contract ZkMinterModTriggerV1 is ZkMinterV1 {
   uint256[] public values;
 
   /// @notice The immutable address where tokens can be recovered to.
-  address public immutable recoveryAddress;
+  address public immutable RECOVERY_ADDRESS;
 
   /// @notice Emitted when trigger is executed.
   event TriggerExecuted(address indexed caller);
@@ -80,7 +80,7 @@ contract ZkMinterModTriggerV1 is ZkMinterV1 {
     targets = _targetAddresses;
     calldatas = _calldatas;
     values = _values;
-    recoveryAddress = _recoveryAddress;
+    RECOVERY_ADDRESS = _recoveryAddress;
   }
 
   /// @notice Mints tokens to this contract address.
@@ -134,8 +134,8 @@ contract ZkMinterModTriggerV1 is ZkMinterV1 {
     _requireNotPaused();
     _checkRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
-    IERC20(_token).safeTransfer(recoveryAddress, _amount);
-    emit TokensRecovered(msg.sender, _token, _amount, recoveryAddress);
+    IERC20(_token).safeTransfer(RECOVERY_ADDRESS, _amount);
+    emit TokensRecovered(msg.sender, _token, _amount, RECOVERY_ADDRESS);
   }
 
   /// @notice Receives ETH.

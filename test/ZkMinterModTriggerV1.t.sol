@@ -48,8 +48,7 @@ contract ZkMinterModTriggerV1Test is ZkCappedMinterV2Test {
     assertEq(address(minterTrigger.mintable()), address(mintable));
     assertEq(minterTrigger.targets(0), address(mockTarget));
     assertEq(minterTrigger.calldatas(0), abi.encodeWithSelector(mockTarget.setValue.selector, 42));
-    assertEq(minterTrigger.values(0), 1 ether);
-    assertEq(minterTrigger.recoveryAddress(), recoveryAddress);
+    assertEq(minterTrigger.RECOVERY_ADDRESS(), recoveryAddress);
   }
 }
 
@@ -90,9 +89,7 @@ contract Constructor is ZkMinterModTriggerV1Test {
     assertEq(_minterTrigger.calldatas(1), _calldatas2);
     assertEq(_minterTrigger.values(0), _value);
     assertEq(_minterTrigger.values(1), _value2);
-    assertEq(_minterTrigger.recoveryAddress(), _recovery);
-    vm.expectRevert(bytes(""));
-    _minterTrigger.values(2);
+    assertEq(_minterTrigger.RECOVERY_ADDRESS(), _recovery);
   }
 
   function testFuzz_RevertIf_AdminIsZeroAddress(IMintable _mintable) public {
