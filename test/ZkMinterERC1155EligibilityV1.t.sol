@@ -2,6 +2,7 @@
 pragma solidity 0.8.24;
 
 import {Test} from "forge-std/Test.sol";
+import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
 import {ZkMinterERC1155EligibilityV1} from "src/ZkMinterERC1155EligibilityV1.sol";
 import {IMintable} from "src/interfaces/IMintable.sol";
@@ -104,6 +105,33 @@ contract Constructor is ZkMinterERC1155EligibilityV1Test {
 
     vm.expectRevert(ZkMinterERC1155EligibilityV1.ZkMinterERC1155EligibilityV1__InvalidBalanceThreshold.selector);
     new ZkMinterERC1155EligibilityV1(_mintable, _admin, _erc1155, _tokenId, 0);
+  }
+
+  function testFuzz_RevertIf_ERC1155IsNonContract(
+    IMintable _mintable,
+    address _admin,
+    uint256 _tokenId,
+    uint256 _balanceThreshold
+  ) public {
+    _assumeSafeUint(_balanceThreshold);
+    _assumeSafeAddress(_admin);
+
+    vm.expectRevert(bytes("call to non-contract address 0xf6d426e316831B43f16aE9E5fCc32422460A3031"));
+    new ZkMinterERC1155EligibilityV1(_mintable, _admin, makeAddr("Fake ERC1155"), _tokenId, _balanceThreshold);
+  }
+
+  function testFuzz_RevertIf_ERC1155SupportsADifferentInterface(
+    IMintable _mintable,
+    address _admin,
+    uint256 _tokenId,
+    uint256 _balanceThreshold
+  ) public {
+    _assumeSafeUint(_balanceThreshold);
+    _assumeSafeAddress(_admin);
+    vm.etch(makeAddr("Fake ERC1155"), address(new ERC721("FAK", "Fake")).code);
+
+    vm.expectRevert(ZkMinterERC1155EligibilityV1.ZkMinterERC1155EligibilityV1__InvalidERC1155Contract.selector);
+    new ZkMinterERC1155EligibilityV1(_mintable, _admin, makeAddr("Fake ERC1155"), _tokenId, _balanceThreshold);
   }
 }
 
