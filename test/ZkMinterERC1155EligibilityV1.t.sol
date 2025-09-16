@@ -128,10 +128,10 @@ contract Constructor is ZkMinterERC1155EligibilityV1Test {
   ) public {
     _assumeSafeUint(_balanceThreshold);
     _assumeSafeAddress(_admin);
-    vm.etch(makeAddr("Fake ERC1155"), address(new ERC721("FAK", "Fake")).code);
+    ERC721 _nonErc1155 = new ERC721("FAK", "Fake");
 
     vm.expectRevert(ZkMinterERC1155EligibilityV1.ZkMinterERC1155EligibilityV1__InvalidERC1155Contract.selector);
-    new ZkMinterERC1155EligibilityV1(_mintable, _admin, makeAddr("Fake ERC1155"), _tokenId, _balanceThreshold);
+    new ZkMinterERC1155EligibilityV1(_mintable, _admin, address(_nonErc1155), _tokenId, _balanceThreshold);
   }
 }
 
