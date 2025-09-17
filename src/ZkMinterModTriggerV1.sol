@@ -24,9 +24,6 @@ contract ZkMinterModTriggerV1 is ZkMinterV1 {
   /// @notice Error for when the admin is the zero address.
   error ZkMinterModTriggerV1__InvalidAdmin();
 
-  /// @notice Error for when the mintable is the zero address.
-  error ZkMinterModTriggerV1__InvalidMintable();
-
   /// @notice Error for when array lengths don't match.
   error ZkMinterModTriggerV1__ArrayLengthMismatch();
 
@@ -36,10 +33,6 @@ contract ZkMinterModTriggerV1 is ZkMinterV1 {
   /// @param _targetAddresses The target contracts to call.
   /// @param _callDatas The call data for the functions.
   constructor(IMintable _mintable, address _admin, address[] memory _targetAddresses, bytes[] memory _callDatas) {
-    if (address(_mintable) == address(0)) {
-      revert ZkMinterModTriggerV1__InvalidMintable();
-    }
-
     if (_admin == address(0)) {
       revert ZkMinterModTriggerV1__InvalidAdmin();
     }

@@ -91,17 +91,6 @@ contract Constructor is ZkMinterModTriggerV1Test {
     new ZkMinterModTriggerV1(_mintable, address(0), _targets, _callDatas);
   }
 
-  function test_RevertIf_MintableIsZeroAddress() public {
-    address[] memory _targets = new address[](1);
-    _targets[0] = address(mockTarget);
-
-    bytes[] memory _callDatas = new bytes[](1);
-    _callDatas[0] = abi.encodeWithSelector(mockTarget.setValue.selector, 42);
-
-    vm.expectRevert(ZkMinterModTriggerV1.ZkMinterModTriggerV1__InvalidMintable.selector);
-    new ZkMinterModTriggerV1(IMintable(address(0)), admin, _targets, _callDatas);
-  }
-
   function test_RevertIf_ArrayLengthMismatch() public {
     address[] memory _targets = new address[](2);
     _targets[0] = address(mockTarget);
