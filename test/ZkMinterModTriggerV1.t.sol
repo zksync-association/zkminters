@@ -11,7 +11,7 @@ contract MockTargetContract {
   bool public called;
   address public lastCaller;
 
-  function setValue(uint256 _value) external {
+  function setValue(uint256 _value) external payable {
     value = _value;
     called = true;
     lastCaller = msg.sender;
@@ -20,6 +20,8 @@ contract MockTargetContract {
   function revertFunction() external pure {
     revert("Mock revert");
   }
+
+  receive() external payable {}
 }
 
 contract ZkMinterModTriggerV1Test is ZkCappedMinterV2Test {
@@ -28,7 +30,8 @@ contract ZkMinterModTriggerV1Test is ZkCappedMinterV2Test {
   MockTargetContract public mockTarget;
 
   address[] public targets;
-  bytes[] public callDatas;
+  bytes[] public calldatas;
+  uint256[] public values;
 
   function setUp() public virtual override {
     super.setUp();
@@ -38,10 +41,13 @@ contract ZkMinterModTriggerV1Test is ZkCappedMinterV2Test {
     targets = new address[](1);
     targets[0] = address(mockTarget);
 
-    callDatas = new bytes[](1);
-    callDatas[0] = abi.encodeWithSelector(mockTarget.setValue.selector, 42);
+    calldatas = new bytes[](1);
+    calldatas[0] = abi.encodeWithSelector(mockTarget.setValue.selector, 42);
 
-    minterTrigger = new ZkMinterModTriggerV1(mintable, admin, targets, callDatas);
+    values = new uint256[](1);
+    values[0] = 100 ether;
+
+    minterTrigger = new ZkMinterModTriggerV1(mintable, admin, targets, calldatas, values);
     _grantMinterRole(cappedMinter, cappedMinterAdmin, address(minterTrigger));
   }
 
@@ -55,27 +61,37 @@ contract ZkMinterModTriggerV1Test is ZkCappedMinterV2Test {
     assertTrue(minterTrigger.hasRole(minterTrigger.PAUSER_ROLE(), admin));
     assertEq(address(minterTrigger.mintable()), address(mintable));
     assertEq(minterTrigger.targets(0), address(mockTarget));
-    assertEq(minterTrigger.callDatas(0), abi.encodeWithSelector(mockTarget.setValue.selector, 42));
+    assertEq(minterTrigger.calldatas(0), abi.encodeWithSelector(mockTarget.setValue.selector, 42));
+    assertEq(minterTrigger.values(0), 100 ether);
   }
 }
 
 contract Constructor is ZkMinterModTriggerV1Test {
-  function testFuzz_InitializesMinterTriggerCorrectly(IMintable _mintable, address _admin, uint256 _setValue) public {
+  function testFuzz_InitializesMinterTriggerCorrectly(
+    IMintable _mintable,
+    address _admin,
+    uint256 _setValue,
+    uint256 _value
+  ) public {
     vm.assume(_admin != address(0) && address(_mintable) != address(0));
 
     MockTargetContract _mockTarget = new MockTargetContract();
     address[] memory _targets = new address[](1);
     _targets[0] = address(_mockTarget);
 
-    bytes[] memory _callDatas = new bytes[](1);
-    _callDatas[0] = abi.encodeWithSelector(_mockTarget.setValue.selector, _setValue);
+    bytes[] memory _calldatas = new bytes[](1);
+    _calldatas[0] = abi.encodeWithSelector(_mockTarget.setValue.selector, _setValue);
 
-    ZkMinterModTriggerV1 _minterTrigger = new ZkMinterModTriggerV1(_mintable, _admin, _targets, _callDatas);
+    uint256[] memory _values = new uint256[](1);
+    _values[0] = _value;
+
+    ZkMinterModTriggerV1 _minterTrigger = new ZkMinterModTriggerV1(_mintable, _admin, _targets, _calldatas, _values);
 
     assertEq(address(_minterTrigger.mintable()), address(_mintable));
     assertTrue(_minterTrigger.hasRole(_minterTrigger.DEFAULT_ADMIN_ROLE(), _admin));
     assertEq(_minterTrigger.targets(0), address(_mockTarget));
-    assertEq(_minterTrigger.callDatas(0), abi.encodeWithSelector(_mockTarget.setValue.selector, _setValue));
+    assertEq(_minterTrigger.calldatas(0), abi.encodeWithSelector(_mockTarget.setValue.selector, _setValue));
+    assertEq(_minterTrigger.values(0), _value);
   }
 
   function testFuzz_RevertIf_AdminIsZeroAddress(IMintable _mintable) public {
@@ -84,11 +100,14 @@ contract Constructor is ZkMinterModTriggerV1Test {
     address[] memory _targets = new address[](1);
     _targets[0] = address(mockTarget);
 
-    bytes[] memory _callDatas = new bytes[](1);
-    _callDatas[0] = abi.encodeWithSelector(mockTarget.setValue.selector, 42);
+    bytes[] memory _calldatas = new bytes[](1);
+    _calldatas[0] = abi.encodeWithSelector(mockTarget.setValue.selector, 42);
+
+    uint256[] memory _values = new uint256[](1);
+    _values[0] = 100 ether;
 
     vm.expectRevert(ZkMinterModTriggerV1.ZkMinterModTriggerV1__InvalidAdmin.selector);
-    new ZkMinterModTriggerV1(_mintable, address(0), _targets, _callDatas);
+    new ZkMinterModTriggerV1(_mintable, address(0), _targets, _calldatas, _values);
   }
 
   function test_RevertIf_ArrayLengthMismatch() public {
@@ -96,11 +115,14 @@ contract Constructor is ZkMinterModTriggerV1Test {
     _targets[0] = address(mockTarget);
     _targets[1] = address(mockTarget);
 
-    bytes[] memory _callDatas = new bytes[](1);
-    _callDatas[0] = abi.encodeWithSelector(mockTarget.setValue.selector, 42);
+    bytes[] memory _calldatas = new bytes[](1);
+    _calldatas[0] = abi.encodeWithSelector(mockTarget.setValue.selector, 42);
+
+    uint256[] memory _values = new uint256[](1);
+    _values[0] = 100 ether;
 
     vm.expectRevert(ZkMinterModTriggerV1.ZkMinterModTriggerV1__ArrayLengthMismatch.selector);
-    new ZkMinterModTriggerV1(mintable, admin, _targets, _callDatas);
+    new ZkMinterModTriggerV1(mintable, admin, _targets, _calldatas, _values);
   }
 }
 
@@ -114,23 +136,36 @@ contract Mint is ZkMinterModTriggerV1Test {
     vm.stopPrank();
   }
 
-  function testFuzz_MintsSuccessfullyAsMinter(address _minter, address _to, uint256 _amount) public {
-    vm.assume(_to != address(0));
+  function testFuzz_MintsSuccessfullyAsMinter(address _minter, uint256 _amount) public {
     _amount = bound(_amount, 1, cappedMinter.CAP());
     _grantTriggerMinterRole(_minter);
+    address _to = address(minterTrigger);
 
     vm.prank(_minter);
     minterTrigger.mint(_to, _amount);
-    assertEq(token.balanceOf(address(minterTrigger)), _amount);
+    assertEq(token.balanceOf(_to), _amount);
   }
 
-  function testFuzz_EmitsMintedEvent(address _to, uint256 _amount) public {
-    vm.assume(_to != address(0));
+  function testFuzz_EmitsMintedEvent(uint256 _amount) public {
     _amount = bound(_amount, 1, cappedMinter.CAP());
+    address _to = address(minterTrigger);
 
     vm.prank(minter);
     vm.expectEmit();
-    emit ZkMinterV1.Minted(minter, address(minterTrigger), _amount);
+    emit ZkMinterV1.Minted(minter, _to, _amount);
+    minterTrigger.mint(_to, _amount);
+  }
+
+  function testFuzz_RevertIf_InvalidRecipient(address _to, uint256 _amount) public {
+    vm.assume(_to != address(minterTrigger));
+    _amount = bound(_amount, 1, cappedMinter.CAP());
+
+    vm.prank(minter);
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        ZkMinterModTriggerV1.ZkMinterModTriggerV1__InvalidRecipient.selector, _to, address(minterTrigger)
+      )
+    );
     minterTrigger.mint(_to, _amount);
   }
 
@@ -166,28 +201,30 @@ contract Trigger is ZkMinterModTriggerV1Test {
 
   function setUp() public override {
     super.setUp();
-    vm.startPrank(admin);
+    vm.prank(admin);
     minterTrigger.grantRole(MINTER_ROLE, caller);
-    vm.stopPrank();
+    vm.deal(address(caller), 100 ether);
   }
 
-  function test_ExecutesTriggersSuccessfully() public {
+  function testFuzz_ExecutesTriggersSuccessfully() public {
     assertEq(mockTarget.value(), 0);
     assertEq(mockTarget.called(), false);
+    assertEq(address(minterTrigger).balance, 0);
 
     vm.prank(caller);
-    minterTrigger.trigger();
+    minterTrigger.trigger{value: 100 ether}();
 
     assertEq(mockTarget.value(), 42);
     assertEq(mockTarget.called(), true);
     assertEq(mockTarget.lastCaller(), address(minterTrigger));
+    assertEq(address(mockTarget).balance, 100 ether);
   }
 
   function test_EmitsTriggerExecutedEvent() public {
     vm.expectEmit();
     emit ZkMinterModTriggerV1.TriggerExecuted(caller, 1);
     vm.prank(caller);
-    minterTrigger.trigger();
+    minterTrigger.trigger{value: 100 ether}();
   }
 
   function test_ExecutesMultipleTriggers() public {
@@ -197,17 +234,23 @@ contract Trigger is ZkMinterModTriggerV1Test {
     _targets[0] = address(mockTarget);
     _targets[1] = address(secondTarget);
 
-    bytes[] memory _callDatas = new bytes[](2);
-    _callDatas[0] = abi.encodeWithSelector(mockTarget.setValue.selector, 42);
-    _callDatas[1] = abi.encodeWithSelector(secondTarget.setValue.selector, 100);
+    bytes[] memory _calldatas = new bytes[](2);
+    _calldatas[0] = abi.encodeWithSelector(mockTarget.setValue.selector, 42);
+    _calldatas[1] = abi.encodeWithSelector(secondTarget.setValue.selector, 100);
 
-    ZkMinterModTriggerV1 multiTrigger = new ZkMinterModTriggerV1(mintable, admin, _targets, _callDatas);
+    uint256[] memory _values = new uint256[](2);
+    _values[0] = 100 ether;
+    _values[1] = 100 ether;
+
+    vm.deal(address(caller), 200 ether);
+
+    ZkMinterModTriggerV1 multiTrigger = new ZkMinterModTriggerV1(mintable, admin, _targets, _calldatas, _values);
 
     vm.prank(admin);
     multiTrigger.grantRole(MINTER_ROLE, caller);
 
     vm.prank(caller);
-    multiTrigger.trigger();
+    multiTrigger.trigger{value: 200 ether}();
 
     assertEq(mockTarget.value(), 42);
     assertEq(mockTarget.called(), true);
@@ -245,10 +288,13 @@ contract Trigger is ZkMinterModTriggerV1Test {
     address[] memory _targets = new address[](1);
     _targets[0] = address(mockTarget);
 
-    bytes[] memory _callDatas = new bytes[](1);
-    _callDatas[0] = abi.encodeWithSelector(mockTarget.revertFunction.selector);
+    bytes[] memory _calldatas = new bytes[](1);
+    _calldatas[0] = abi.encodeWithSelector(mockTarget.revertFunction.selector);
 
-    ZkMinterModTriggerV1 failTrigger = new ZkMinterModTriggerV1(mintable, admin, _targets, _callDatas);
+    uint256[] memory _values = new uint256[](1);
+    _values[0] = 100 ether;
+
+    ZkMinterModTriggerV1 failTrigger = new ZkMinterModTriggerV1(mintable, admin, _targets, _calldatas, _values);
 
     vm.prank(admin);
     failTrigger.grantRole(MINTER_ROLE, caller);
