@@ -297,6 +297,7 @@ contract Trigger is ZkMinterModTriggerV1Test {
 contract IntegrationTest is ZkMinterModTriggerV1Test {
   function testFuzz_MintsThenTriggers_MintedTokensEndUpAtTarget(
     address _caller,
+    address _recipient,
     uint256 _amount,
     uint256 _ethValue,
     uint256 _setValue
@@ -311,38 +312,38 @@ contract IntegrationTest is ZkMinterModTriggerV1Test {
     _targets[1] = address(mockTarget);
 
     bytes[] memory _calldatas = new bytes[](2);
-    _calldatas[0] = abi.encodeWithSignature("transfer(address,uint256)", address(mockTarget), _amount);
+    _calldatas[0] = abi.encodeWithSignature("transfer(address,uint256)", _recipient, _amount);
     _calldatas[1] = abi.encodeWithSelector(mockTarget.setValue.selector, _setValue);
 
     uint256[] memory _values = new uint256[](2);
     _values[0] = 0;
     _values[1] = _ethValue;
 
-    ZkMinterModTriggerV1 multiTrigger = new ZkMinterModTriggerV1(mintable, admin, _targets, _calldatas, _values);
+    ZkMinterModTriggerV1 _multiTrigger = new ZkMinterModTriggerV1(mintable, admin, _targets, _calldatas, _values);
 
     // Configure roles
-    _grantMinterRole(cappedMinter, cappedMinterAdmin, address(multiTrigger));
+    _grantMinterRole(cappedMinter, cappedMinterAdmin, address(_multiTrigger));
     vm.prank(admin);
-    multiTrigger.grantRole(MINTER_ROLE, _caller);
+    _multiTrigger.grantRole(MINTER_ROLE, _caller);
 
     // Mint tokens
     vm.prank(_caller);
-    multiTrigger.mint(address(multiTrigger), _amount);
-    assertEq(token.balanceOf(address(multiTrigger)), _amount);
+    _multiTrigger.mint(address(_multiTrigger), _amount);
+    assertEq(token.balanceOf(address(_multiTrigger)), _amount);
 
     // Call trigger
     vm.deal(address(_caller), _ethValue);
     vm.prank(_caller);
-    multiTrigger.trigger{value: _ethValue}();
+    _multiTrigger.trigger{value: _ethValue}();
 
     // Verify mock target call and ETH transfer
     assertEq(mockTarget.value(), _setValue);
     assertEq(mockTarget.called(), true);
-    assertEq(mockTarget.lastCaller(), address(multiTrigger));
+    assertEq(mockTarget.lastCaller(), address(_multiTrigger));
     assertEq(address(mockTarget).balance, _ethValue);
 
     // Verify ERC20 tokens were transferred from the trigger to the mock target
-    assertEq(token.balanceOf(address(multiTrigger)), 0);
-    assertEq(token.balanceOf(address(mockTarget)), _amount);
+    assertEq(token.balanceOf(address(_multiTrigger)), 0);
+    assertEq(token.balanceOf(_recipient), _amount);
   }
 }
