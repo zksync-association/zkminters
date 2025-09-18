@@ -304,6 +304,7 @@ contract IntegrationTest is ZkMinterModTriggerV1Test {
   ) public {
     _amount = bound(_amount, 1, cappedMinter.CAP());
     _ethValue = bound(_ethValue, 0, 1000 ether);
+    vm.assume(_recipient != address(0));
 
     // Create a trigger that first transfers ERC20 tokens from the trigger to the mock target,
     // then calls the mock target's setValue with ETH.
