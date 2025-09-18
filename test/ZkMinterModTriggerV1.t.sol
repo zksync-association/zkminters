@@ -5,24 +5,7 @@ import {ZkMinterModTriggerV1} from "src/ZkMinterModTriggerV1.sol";
 import {ZkMinterV1} from "src/ZkMinterV1.sol";
 import {ZkCappedMinterV2Test} from "test/helpers/ZkCappedMinterV2.t.sol";
 import {IMintable} from "src/interfaces/IMintable.sol";
-
-contract MockTargetContract {
-  uint256 public value;
-  bool public called;
-  address public lastCaller;
-
-  function setValue(uint256 _value) external payable {
-    value = _value;
-    called = true;
-    lastCaller = msg.sender;
-  }
-
-  function revertFunction() external pure {
-    revert("Mock revert");
-  }
-
-  receive() external payable {}
-}
+import {MockTargetContract} from "test/helpers/MockTargetContract.sol";
 
 contract ZkMinterModTriggerV1Test is ZkCappedMinterV2Test {
   ZkMinterModTriggerV1 public minterTrigger;
