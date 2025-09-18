@@ -11,6 +11,7 @@ contract ZkMinterModTriggerV1Test is ZkCappedMinterV2Test {
   ZkMinterModTriggerV1 public minterTrigger;
   IMintable public mintable;
   MockTargetContract public mockTarget;
+  address public caller = makeAddr("caller");
 
   address[] public targets;
   bytes[] public calldatas;
@@ -180,8 +181,6 @@ contract Mint is ZkMinterModTriggerV1Test {
 }
 
 contract Trigger is ZkMinterModTriggerV1Test {
-  address public caller = makeAddr("caller");
-
   function setUp() public override {
     super.setUp();
     vm.prank(admin);
@@ -189,7 +188,7 @@ contract Trigger is ZkMinterModTriggerV1Test {
     vm.deal(address(caller), 100 ether);
   }
 
-  function testFuzz_ExecutesTriggersSuccessfully() public {
+  function test_TriggersSuccessfully() public {
     assertEq(mockTarget.value(), 0);
     assertEq(mockTarget.called(), false);
     assertEq(address(minterTrigger).balance, 0);
@@ -203,10 +202,13 @@ contract Trigger is ZkMinterModTriggerV1Test {
     assertEq(address(mockTarget).balance, 100 ether);
   }
 
-  function test_EmitsTriggerExecutedEvent() public {
+  function testFuzz_EmitsTriggerExecutedEvent(address _caller) public {
+    deal(address(_caller), 100 ether);
+    _grantTriggerMinterRole(_caller);
+
     vm.expectEmit();
-    emit ZkMinterModTriggerV1.TriggerExecuted(caller, 1);
-    vm.prank(caller);
+    emit ZkMinterModTriggerV1.TriggerExecuted(_caller, 1);
+    vm.prank(_caller);
     minterTrigger.trigger{value: 100 ether}();
   }
 
@@ -289,5 +291,58 @@ contract Trigger is ZkMinterModTriggerV1Test {
     );
     vm.prank(caller);
     failTrigger.trigger();
+  }
+}
+
+contract IntegrationTest is ZkMinterModTriggerV1Test {
+  function testFuzz_MintsThenTriggers_MintedTokensEndUpAtTarget(
+    address _caller,
+    uint256 _amount,
+    uint256 _ethValue,
+    uint256 _setValue
+  ) public {
+    _amount = bound(_amount, 1, cappedMinter.CAP());
+    _ethValue = bound(_ethValue, 0, 1000 ether);
+
+    // Create a trigger that first transfers ERC20 tokens from the trigger to the mock target,
+    // then calls the mock target's setValue with ETH.
+    address[] memory _targets = new address[](2);
+    _targets[0] = address(token);
+    _targets[1] = address(mockTarget);
+
+    bytes[] memory _calldatas = new bytes[](2);
+    _calldatas[0] = abi.encodeWithSignature("transfer(address,uint256)", address(mockTarget), _amount);
+    _calldatas[1] = abi.encodeWithSelector(mockTarget.setValue.selector, _setValue);
+
+    uint256[] memory _values = new uint256[](2);
+    _values[0] = 0;
+    _values[1] = _ethValue;
+
+    ZkMinterModTriggerV1 multiTrigger = new ZkMinterModTriggerV1(mintable, admin, _targets, _calldatas, _values);
+
+    // Configure roles
+    _grantMinterRole(cappedMinter, cappedMinterAdmin, address(multiTrigger));
+    vm.prank(admin);
+    multiTrigger.grantRole(MINTER_ROLE, _caller);
+
+    // Mint tokens
+    vm.prank(_caller);
+    multiTrigger.mint(address(multiTrigger), _amount);
+    assertEq(token.balanceOf(address(multiTrigger)), _amount);
+
+    // Call trigger
+    vm.deal(address(_caller), _ethValue);
+    vm.prank(_caller);
+    multiTrigger.trigger{value: _ethValue}();
+
+    // Verify mock target call and ETH transfer
+    assertEq(mockTarget.value(), _setValue);
+    assertEq(mockTarget.called(), true);
+    assertEq(mockTarget.lastCaller(), address(multiTrigger));
+    assertEq(address(mockTarget).balance, _ethValue);
+
+    // Verify ERC20 tokens were transferred from the trigger to the mock target
+    assertEq(token.balanceOf(address(multiTrigger)), 0);
+    assertEq(token.balanceOf(address(mockTarget)), _amount);
   }
 }
