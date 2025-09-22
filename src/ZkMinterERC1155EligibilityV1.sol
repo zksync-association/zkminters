@@ -12,7 +12,7 @@ import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 /// tokens to a specified address if they meet the ERC1155 balance threshold. The contract provides:
 /// - ERC1155 balance verification for minting eligibility
 /// - Configurable token ID and balance threshold requirements
-/// - Admin controls for updating ERC1155 contract, token ID, and threshold
+/// - Admin controls for updating the token ID, and threshold
 /// - Integration with the broader ZK Minter ecosystem
 /// @custom:security-contact security@matterlabs.dev
 contract ZkMinterERC1155EligibilityV1 is ZkMinterV1 {
