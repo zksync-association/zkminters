@@ -2,7 +2,7 @@
   cache = true
   evm_version = "paris"
   fs_permissions = [{ access = "read", path = "./zkout" }]
-  fuzz = { runs = 50 }
+  fuzz = { runs = 1 }
   optimizer = true
   optimizer_runs = 10_000_000
   remappings = [

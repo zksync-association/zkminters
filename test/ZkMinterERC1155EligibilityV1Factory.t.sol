@@ -49,11 +49,7 @@ contract CreateMinterERC1155 is ZkMinterERC1155EligibilityV1FactoryTest {
     _assumeValidBalanceThreshold(_balanceThreshold);
 
     // Mock supportsInterface to return true for ERC1155 interface
-    vm.mockCall(
-      _erc1155,
-      abi.encodeWithSelector(bytes4(0x01ffc9a7), type(IERC1155).interfaceId),
-      abi.encode(true)
-    );
+    vm.mockCall(_erc1155, abi.encodeWithSelector(bytes4(0x01ffc9a7), type(IERC1155).interfaceId), abi.encode(true));
 
     address _minterAddress =
       factory.createMinter(_mintable, _minterAdmin, _erc1155, _tokenId, _balanceThreshold, _saltNonce);
@@ -79,11 +75,7 @@ contract CreateMinterERC1155 is ZkMinterERC1155EligibilityV1FactoryTest {
     _assumeValidBalanceThreshold(_balanceThreshold);
 
     // Mock supportsInterface to return true for ERC1155 interface
-    vm.mockCall(
-      _erc1155,
-      abi.encodeWithSelector(bytes4(0x01ffc9a7), type(IERC1155).interfaceId),
-      abi.encode(true)
-    );
+    vm.mockCall(_erc1155, abi.encodeWithSelector(bytes4(0x01ffc9a7), type(IERC1155).interfaceId), abi.encode(true));
 
     address _expectedMinterAddress =
       factory.getMinter(_mintable, _minterAdmin, _erc1155, _tokenId, _balanceThreshold, _saltNonce);
@@ -108,11 +100,7 @@ contract CreateMinterERC1155 is ZkMinterERC1155EligibilityV1FactoryTest {
     _assumeValidBalanceThreshold(_balanceThreshold);
 
     // Mock supportsInterface to return true for ERC1155 interface
-    vm.mockCall(
-      _erc1155,
-      abi.encodeWithSelector(bytes4(0x01ffc9a7), type(IERC1155).interfaceId),
-      abi.encode(true)
-    );
+    vm.mockCall(_erc1155, abi.encodeWithSelector(bytes4(0x01ffc9a7), type(IERC1155).interfaceId), abi.encode(true));
 
     address _minterAddress =
       factory.createMinter(_mintable, abi.encode(_minterAdmin, _erc1155, _tokenId, _balanceThreshold, _saltNonce));
@@ -138,11 +126,7 @@ contract CreateMinterERC1155 is ZkMinterERC1155EligibilityV1FactoryTest {
     _assumeValidBalanceThreshold(_balanceThreshold);
 
     // Mock supportsInterface to return true for ERC1155 interface
-    vm.mockCall(
-      _erc1155,
-      abi.encodeWithSelector(bytes4(0x01ffc9a7), type(IERC1155).interfaceId),
-      abi.encode(true)
-    );
+    vm.mockCall(_erc1155, abi.encodeWithSelector(bytes4(0x01ffc9a7), type(IERC1155).interfaceId), abi.encode(true));
 
     address _expectedMinterAddress =
       factory.getMinter(_mintable, _minterAdmin, _erc1155, _tokenId, _balanceThreshold, _saltNonce);
@@ -167,11 +151,7 @@ contract CreateMinterERC1155 is ZkMinterERC1155EligibilityV1FactoryTest {
     _assumeValidBalanceThreshold(_balanceThreshold);
 
     // Mock supportsInterface to return true for ERC1155 interface
-    vm.mockCall(
-      _erc1155,
-      abi.encodeWithSelector(bytes4(0x01ffc9a7), type(IERC1155).interfaceId),
-      abi.encode(true)
-    );
+    vm.mockCall(_erc1155, abi.encodeWithSelector(bytes4(0x01ffc9a7), type(IERC1155).interfaceId), abi.encode(true));
 
     factory.createMinter(_mintable, abi.encode(_minterAdmin, _erc1155, _tokenId, _balanceThreshold, _saltNonce));
 
@@ -187,14 +167,10 @@ contract CreateMinterERC1155 is ZkMinterERC1155EligibilityV1FactoryTest {
     uint256 _saltNonce
   ) public {
     _assumeValidBalanceThreshold(_balanceThreshold);
-    
+
     // Mock supportsInterface to return true for ERC1155 interface
-    vm.mockCall(
-      _erc1155,
-      abi.encodeWithSelector(bytes4(0x01ffc9a7), type(IERC1155).interfaceId),
-      abi.encode(true)
-    );
-    
+    vm.mockCall(_erc1155, abi.encodeWithSelector(bytes4(0x01ffc9a7), type(IERC1155).interfaceId), abi.encode(true));
+
     vm.expectRevert(
       abi.encodeWithSelector(ZkMinterERC1155EligibilityV1.ZkMinterERC1155EligibilityV1__InvalidZeroAddress.selector)
     );
@@ -211,14 +187,10 @@ contract CreateMinterERC1155 is ZkMinterERC1155EligibilityV1FactoryTest {
   ) public {
     _assumeValidAddress(_minterAdmin);
     _assumeValidBalanceThreshold(_balanceThreshold);
-    
+
     // Mock supportsInterface to return false for ERC1155 interface
-    vm.mockCall(
-      _erc1155,
-      abi.encodeWithSelector(bytes4(0x01ffc9a7), type(IERC1155).interfaceId),
-      abi.encode(false)
-    );
-    
+    vm.mockCall(_erc1155, abi.encodeWithSelector(bytes4(0x01ffc9a7), type(IERC1155).interfaceId), abi.encode(false));
+
     vm.expectRevert(
       abi.encodeWithSelector(ZkMinterERC1155EligibilityV1.ZkMinterERC1155EligibilityV1__InvalidERC1155Contract.selector)
     );
@@ -233,14 +205,10 @@ contract CreateMinterERC1155 is ZkMinterERC1155EligibilityV1FactoryTest {
     uint256 _saltNonce
   ) public {
     _assumeValidAddress(_minterAdmin);
-    
+
     // Mock supportsInterface to return true for ERC1155 interface
-    vm.mockCall(
-      _erc1155,
-      abi.encodeWithSelector(bytes4(0x01ffc9a7), type(IERC1155).interfaceId),
-      abi.encode(true)
-    );
-    
+    vm.mockCall(_erc1155, abi.encodeWithSelector(bytes4(0x01ffc9a7), type(IERC1155).interfaceId), abi.encode(true));
+
     vm.expectRevert(
       abi.encodeWithSelector(
         ZkMinterERC1155EligibilityV1.ZkMinterERC1155EligibilityV1__InvalidBalanceThreshold.selector
@@ -263,11 +231,7 @@ contract GetMinter is ZkMinterERC1155EligibilityV1FactoryTest {
     _assumeValidBalanceThreshold(_balanceThreshold);
 
     // Mock supportsInterface to return true for ERC1155 interface
-    vm.mockCall(
-      _erc1155,
-      abi.encodeWithSelector(bytes4(0x01ffc9a7), type(IERC1155).interfaceId),
-      abi.encode(true)
-    );
+    vm.mockCall(_erc1155, abi.encodeWithSelector(bytes4(0x01ffc9a7), type(IERC1155).interfaceId), abi.encode(true));
 
     address _expectedMinterAddress =
       factory.getMinter(_mintable, _minterAdmin, _erc1155, _tokenId, _balanceThreshold, _saltNonce);
@@ -298,11 +262,7 @@ contract GetMinter is ZkMinterERC1155EligibilityV1FactoryTest {
     assertEq(_codeSize, 0);
 
     // Mock supportsInterface to return true for ERC1155 interface
-    vm.mockCall(
-      _erc1155,
-      abi.encodeWithSelector(bytes4(0x01ffc9a7), type(IERC1155).interfaceId),
-      abi.encode(true)
-    );
+    vm.mockCall(_erc1155, abi.encodeWithSelector(bytes4(0x01ffc9a7), type(IERC1155).interfaceId), abi.encode(true));
 
     factory.createMinter(_mintable, abi.encode(_minterAdmin, _erc1155, _tokenId, _balanceThreshold, _saltNonce));
   }
