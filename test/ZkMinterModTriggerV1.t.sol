@@ -57,7 +57,7 @@ contract Constructor is ZkMinterModTriggerV1Test {
     uint256 _setValue,
     uint256 _value
   ) public {
-    vm.assume(_admin != address(0) && address(_mintable) != address(0));
+    vm.assume(_admin != address(0));
 
     MockTargetContract _mockTarget = new MockTargetContract();
     address[] memory _targets = new address[](1);
@@ -79,8 +79,6 @@ contract Constructor is ZkMinterModTriggerV1Test {
   }
 
   function testFuzz_RevertIf_AdminIsZeroAddress(IMintable _mintable) public {
-    vm.assume(address(_mintable) != address(0));
-
     address[] memory _targets = new address[](1);
     _targets[0] = address(mockTarget);
 
