@@ -97,5 +97,15 @@ contract ZkMinterModTriggerV1 is ZkMinterV1 {
     emit TriggerExecuted(msg.sender);
   }
 
+  /// @notice Mints tokens to this contract address and then executes all configured trigger calls.
+  /// @param _to The address that will receive the minted tokens, must be address(this).
+  /// @param _amount The quantity of tokens to mint.
+  /// @dev Only callable by addresses with the MINTER_ROLE.
+  function mintAndTrigger(address _to, uint256 _amount) public payable {
+    mint(_to, _amount);
+    trigger();
+  }
+
+  /// @notice Receives ETH.
   receive() external payable {}
 }

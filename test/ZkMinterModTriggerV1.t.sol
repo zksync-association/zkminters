@@ -306,3 +306,178 @@ contract Trigger is ZkMinterModTriggerV1Test {
     failTrigger.trigger();
   }
 }
+
+contract MintAndTrigger is ZkMinterModTriggerV1Test {
+  function setUp() public override {
+    super.setUp();
+    vm.prank(admin);
+    minterTrigger.grantRole(MINTER_ROLE, caller);
+  }
+
+  function testFuzz_MintsAndTriggersSuccessfully(uint256 _amount, uint256 _value) public {
+    _amount = bound(_amount, 1, cappedMinter.CAP());
+    _value = bound(_value, 1 ether, 100_000 ether);
+
+    assertEq(token.balanceOf(address(minterTrigger)), 0);
+    assertEq(mockTarget.value(), 0);
+    assertEq(mockTarget.called(), false);
+    assertEq(address(mockTarget).balance, 0);
+
+    vm.deal(caller, _value);
+    vm.prank(caller);
+    minterTrigger.mintAndTrigger{value: _value}(address(minterTrigger), _amount);
+
+    // Minted to the trigger contract.
+    assertEq(token.balanceOf(address(minterTrigger)), _amount);
+
+    // Trigger executed against the configured target with 1 ether.
+    assertEq(mockTarget.value(), 42);
+    assertEq(mockTarget.called(), true);
+    assertEq(mockTarget.lastCaller(), address(minterTrigger));
+    assertEq(address(mockTarget).balance, 1 ether);
+  }
+
+  function testFuzz_EmitsEvents(address _caller, uint256 _amount, uint256 _value) public {
+    _amount = bound(_amount, 1, cappedMinter.CAP());
+    _value = bound(_value, 1 ether, 100_000 ether);
+    _grantTriggerMinterRole(_caller);
+
+    vm.deal(_caller, _value);
+
+    vm.expectEmit();
+    emit ZkMinterV1.Minted(_caller, address(minterTrigger), _amount);
+    vm.expectEmit();
+    emit ZkMinterModTriggerV1.TriggerExecuted(_caller);
+
+    vm.prank(_caller);
+    minterTrigger.mintAndTrigger{value: _value}(address(minterTrigger), _amount);
+  }
+
+  function testFuzz_RevertIf_InvalidRecipient(address _to, uint256 _amount, uint256 _value) public {
+    vm.assume(_to != address(minterTrigger));
+    _amount = bound(_amount, 1, cappedMinter.CAP());
+    _value = bound(_value, 0, 100_000 ether);
+
+    vm.deal(caller, _value);
+    vm.prank(caller);
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        ZkMinterModTriggerV1.ZkMinterModTriggerV1__InvalidRecipient.selector, _to, address(minterTrigger)
+      )
+    );
+    minterTrigger.mintAndTrigger{value: _value}(_to, _amount);
+  }
+
+  function testFuzz_RevertIf_NotMinter(address _nonMinter, address _to, uint256 _amount, uint256 _value) public {
+    vm.assume(_nonMinter != caller && _nonMinter != admin);
+    _amount = bound(_amount, 0, cappedMinter.CAP());
+    _value = bound(_value, 0, 100_000 ether);
+
+    vm.deal(_nonMinter, _value);
+    vm.prank(_nonMinter);
+    vm.expectRevert(_formatAccessControlError(_nonMinter, MINTER_ROLE));
+    minterTrigger.mintAndTrigger{value: _value}(_to, _amount);
+  }
+
+  function testFuzz_RevertIf_Paused(address _to, uint256 _amount, uint256 _value) public {
+    _amount = bound(_amount, 0, cappedMinter.CAP());
+    _value = bound(_value, 0, 100_000 ether);
+
+    vm.prank(admin);
+    minterTrigger.pause();
+
+    vm.deal(caller, _value);
+    vm.prank(caller);
+    vm.expectRevert("Pausable: paused");
+    minterTrigger.mintAndTrigger{value: _value}(_to, _amount);
+  }
+
+  function testFuzz_RevertIf_Closed(address _to, uint256 _amount, uint256 _value) public {
+    _amount = bound(_amount, 0, cappedMinter.CAP());
+    _value = bound(_value, 0, 100_000 ether);
+
+    vm.prank(admin);
+    minterTrigger.close();
+
+    vm.deal(caller, _value);
+    vm.prank(caller);
+    vm.expectRevert(ZkMinterV1.ZkMinter__ContractClosed.selector);
+    minterTrigger.mintAndTrigger{value: _value}(_to, _amount);
+  }
+
+  function testFuzz_RevertIf_FunctionCallFails(uint256 _amount, uint256 _ethValue) public {
+    _amount = bound(_amount, 1, cappedMinter.CAP());
+    _ethValue = bound(_ethValue, 0, 100_000 ether);
+
+    address[] memory _targets = new address[](1);
+    _targets[0] = address(mockTarget);
+
+    bytes[] memory _calldatas = new bytes[](1);
+    _calldatas[0] = abi.encodeWithSelector(mockTarget.revertFunction.selector);
+
+    uint256[] memory _values = new uint256[](1);
+    _values[0] = _ethValue;
+
+    ZkMinterModTriggerV1 failTrigger = new ZkMinterModTriggerV1(mintable, admin, _targets, _calldatas, _values);
+
+    // Allow failTrigger to mint on the underlying cappedMinter and grant a caller minter role.
+    _grantMinterRole(cappedMinter, cappedMinterAdmin, address(failTrigger));
+    vm.prank(admin);
+    failTrigger.grantRole(MINTER_ROLE, caller);
+
+    vm.deal(caller, _ethValue);
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        ZkMinterModTriggerV1.ZkMinterModTriggerV1__TriggerCallFailed.selector, 0, address(mockTarget)
+      )
+    );
+    vm.prank(caller);
+    failTrigger.mintAndTrigger{value: _ethValue}(address(failTrigger), _amount);
+  }
+
+  function testFuzz_TokensTransferredAndCallExecuted(
+    address _recipient,
+    uint256 _amount,
+    uint256 _ethValue,
+    uint256 _setValue
+  ) public {
+    _amount = bound(_amount, 1, cappedMinter.CAP());
+    _ethValue = bound(_ethValue, 0, 1000 ether);
+    vm.assume(_recipient != address(0));
+
+    // Configure multi-step trigger: ERC20 transfer then mock target call with ETH
+    address[] memory _targets = new address[](2);
+    _targets[0] = address(token);
+    _targets[1] = address(mockTarget);
+
+    bytes[] memory _calldatas = new bytes[](2);
+    _calldatas[0] = abi.encodeWithSignature("transfer(address,uint256)", _recipient, _amount);
+    _calldatas[1] = abi.encodeWithSelector(mockTarget.setValue.selector, _setValue);
+
+    uint256[] memory _values = new uint256[](2);
+    _values[0] = 0;
+    _values[1] = _ethValue;
+
+    ZkMinterModTriggerV1 multiTrigger = new ZkMinterModTriggerV1(mintable, admin, _targets, _calldatas, _values);
+
+    // Set up role.
+    _grantMinterRole(cappedMinter, cappedMinterAdmin, address(multiTrigger));
+    vm.prank(admin);
+    multiTrigger.grantRole(MINTER_ROLE, caller);
+
+    // Execute mint and trigger.
+    vm.deal(caller, _ethValue);
+    vm.prank(caller);
+    multiTrigger.mintAndTrigger{value: _ethValue}(address(multiTrigger), _amount);
+
+    // Verify call and ETH transfer.
+    assertEq(mockTarget.value(), _setValue);
+    assertEq(mockTarget.called(), true);
+    assertEq(mockTarget.lastCaller(), address(multiTrigger));
+    assertEq(address(mockTarget).balance, _ethValue);
+
+    // Verify token transfer from trigger to recipient.
+    assertEq(token.balanceOf(address(multiTrigger)), 0);
+    assertEq(token.balanceOf(_recipient), _amount);
+  }
+}
