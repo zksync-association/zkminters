@@ -207,7 +207,7 @@ contract Trigger is ZkMinterModTriggerV1Test {
     _grantTriggerMinterRole(_caller);
 
     vm.expectEmit();
-    emit ZkMinterModTriggerV1.TriggerExecuted(_caller, 1);
+    emit ZkMinterModTriggerV1.TriggerExecuted(_caller);
     vm.prank(_caller);
     minterTrigger.trigger{value: 100 ether}();
   }

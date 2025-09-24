@@ -20,7 +20,7 @@ contract ZkMinterModTriggerV1 is ZkMinterV1 {
   uint256[] public values;
 
   /// @notice Emitted when trigger is executed.
-  event TriggerExecuted(address indexed caller, uint256 callsExecuted);
+  event TriggerExecuted(address indexed caller);
 
   /// @notice Error for when a function call fails.
   error ZkMinterModTriggerV1__TriggerCallFailed(uint256 index, address target);
@@ -94,7 +94,7 @@ contract ZkMinterModTriggerV1 is ZkMinterV1 {
       }
     }
 
-    emit TriggerExecuted(msg.sender, targets.length);
+    emit TriggerExecuted(msg.sender);
   }
 
   receive() external payable {}
