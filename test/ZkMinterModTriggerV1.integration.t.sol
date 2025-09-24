@@ -5,7 +5,7 @@ import {ZkMinterModTriggerV1} from "src/ZkMinterModTriggerV1.sol";
 import {ZkMinterModTriggerV1Test} from "test/ZkMinterModTriggerV1.t.sol";
 
 contract ZkMinterModTriggerV1Integration is ZkMinterModTriggerV1Test {
-  function testFuzz_MintsThenTriggers_MintedTokensEndUpAtTarget(
+  function testFuzz_TokensSentToTargetWhenMintedAndTriggered(
     address _caller,
     address _recipient,
     uint256 _amount,
