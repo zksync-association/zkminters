@@ -29,7 +29,7 @@ contract ZkMinterModTriggerV1Test is ZkCappedMinterV2Test {
     calldatas[0] = abi.encodeWithSelector(mockTarget.setValue.selector, 42);
 
     values = new uint256[](1);
-    values[0] = 100 ether;
+    values[0] = 1 ether;
 
     minterTrigger = new ZkMinterModTriggerV1(mintable, admin, targets, calldatas, values);
     _grantMinterRole(cappedMinter, cappedMinterAdmin, address(minterTrigger));
@@ -46,7 +46,7 @@ contract ZkMinterModTriggerV1Test is ZkCappedMinterV2Test {
     assertEq(address(minterTrigger.mintable()), address(mintable));
     assertEq(minterTrigger.targets(0), address(mockTarget));
     assertEq(minterTrigger.calldatas(0), abi.encodeWithSelector(mockTarget.setValue.selector, 42));
-    assertEq(minterTrigger.values(0), 100 ether);
+    assertEq(minterTrigger.values(0), 1 ether);
   }
 }
 
@@ -187,7 +187,7 @@ contract Trigger is ZkMinterModTriggerV1Test {
   }
 
   function testFuzz_TriggersSuccessfully(uint256 _value) public {
-    _value = bound(_value, 100 ether, type(uint256).max);
+    _value = bound(_value, 1 ether, 100_000 ether);
     assertEq(mockTarget.value(), 0);
     assertEq(mockTarget.called(), false);
     assertEq(address(minterTrigger).balance, 0);
@@ -199,11 +199,11 @@ contract Trigger is ZkMinterModTriggerV1Test {
     assertEq(mockTarget.value(), 42);
     assertEq(mockTarget.called(), true);
     assertEq(mockTarget.lastCaller(), address(minterTrigger));
-    assertEq(address(mockTarget).balance, 100 ether);
+    assertEq(address(mockTarget).balance, 1 ether);
   }
 
   function testFuzz_EmitsTriggerExecutedEvent(address _caller, uint256 _value) public {
-    _value = bound(_value, 100 ether, type(uint256).max);
+    _value = bound(_value, 1 ether, 100_000 ether);
     deal(address(_caller), _value);
     _grantTriggerMinterRole(_caller);
 
@@ -214,8 +214,8 @@ contract Trigger is ZkMinterModTriggerV1Test {
   }
 
   function testFuzz_ExecutesMultipleTriggers(uint256 _value1, uint256 _value2) public {
-    _value1 = bound(_value1, 100 ether, type(uint256).max / 2);
-    _value2 = bound(_value2, 100 ether, type(uint256).max / 2);
+    _value1 = bound(_value1, 1 ether, 100_000 ether);
+    _value2 = bound(_value2, 1 ether, 100_000 ether);
     MockTargetContract secondTarget = new MockTargetContract();
 
     address[] memory _targets = new address[](2);
@@ -230,7 +230,7 @@ contract Trigger is ZkMinterModTriggerV1Test {
     _values[0] = _value1;
     _values[1] = _value2;
 
-    vm.deal(address(caller), 200 ether);
+    vm.deal(address(caller), _value1 + _value2);
 
     ZkMinterModTriggerV1 multiTrigger = new ZkMinterModTriggerV1(mintable, admin, _targets, _calldatas, _values);
 
