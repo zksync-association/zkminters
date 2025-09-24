@@ -55,27 +55,36 @@ contract Constructor is ZkMinterModTriggerV1Test {
     IMintable _mintable,
     address _admin,
     uint256 _setValue,
-    uint256 _value
+    uint256 _value,
+    address _target2,
+    bytes memory _calldatas2,
+    uint256 _value2
   ) public {
     vm.assume(_admin != address(0));
 
     MockTargetContract _mockTarget = new MockTargetContract();
-    address[] memory _targets = new address[](1);
+    address[] memory _targets = new address[](2);
     _targets[0] = address(_mockTarget);
+    _targets[1] = _target2;
 
-    bytes[] memory _calldatas = new bytes[](1);
+    bytes[] memory _calldatas = new bytes[](2);
     _calldatas[0] = abi.encodeWithSelector(_mockTarget.setValue.selector, _setValue);
+    _calldatas[1] = _calldatas2;
 
-    uint256[] memory _values = new uint256[](1);
+    uint256[] memory _values = new uint256[](2);
     _values[0] = _value;
+    _values[1] = _value2;
 
     ZkMinterModTriggerV1 _minterTrigger = new ZkMinterModTriggerV1(_mintable, _admin, _targets, _calldatas, _values);
 
     assertEq(address(_minterTrigger.mintable()), address(_mintable));
     assertTrue(_minterTrigger.hasRole(_minterTrigger.DEFAULT_ADMIN_ROLE(), _admin));
     assertEq(_minterTrigger.targets(0), address(_mockTarget));
+    assertEq(_minterTrigger.targets(1), _target2);
     assertEq(_minterTrigger.calldatas(0), abi.encodeWithSelector(_mockTarget.setValue.selector, _setValue));
+    assertEq(_minterTrigger.calldatas(1), _calldatas2);
     assertEq(_minterTrigger.values(0), _value);
+    assertEq(_minterTrigger.values(1), _value2);
   }
 
   function testFuzz_RevertIf_AdminIsZeroAddress(IMintable _mintable) public {
