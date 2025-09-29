@@ -1,105 +1,111 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import "src/interfaces/IZkCappedMinter.sol";
+import {IMintable} from "src/interfaces/IMintable.sol";
+import {ZkMinterV1} from "src/ZkMinterV1.sol";
 
-contract ZkMinterModTriggerV1 {
-  IZkCappedMinter public minter; // The ZkCappedMinter for which this project
-  address public admin; // The address that can change everything
-  address[] public targets; // The target contract to call
-  bytes[] public functionSignatures; // The function signature to execute (e.g., function selector)
-  bytes[] public callDatas; // The call data for the function
+/// @title ZkMinterModTriggerV1
+/// @author [ScopeLift](https://scopelift.co)
+/// @notice A contract that enables minting tokens and triggering external function calls.
+/// @dev This contract should typically be placed at the beginning of the mint chain.
+/// @custom:security-contact security@matterlabs.dev
+contract ZkMinterModTriggerV1 is ZkMinterV1 {
+  /// @notice The target contracts to call when trigger is executed.
+  address[] public targets;
 
-  modifier adminOnly() {
-    require(msg.sender == admin, "Only admin can call this");
-    _;
-  }
+  /// @notice The calldata for the functions.
+  bytes[] public calldatas;
 
+  /// @notice The values to send with the calls.
+  uint256[] public values;
+
+  /// @notice Emitted when trigger is executed.
+  event TriggerExecuted(address indexed caller);
+
+  /// @notice Error for when a function call fails.
+  error ZkMinterModTriggerV1__TriggerCallFailed(uint256 index, address target);
+
+  /// @notice Error for when the recipient is not the expected recipient.
+  error ZkMinterModTriggerV1__InvalidRecipient(address recipient, address expectedRecipient);
+
+  /// @notice Error for when the admin is the zero address.
+  error ZkMinterModTriggerV1__InvalidAdmin();
+
+  /// @notice Error for when array lengths don't match.
+  error ZkMinterModTriggerV1__ArrayLengthMismatch();
+
+  /// @notice Initializes the trigger contract with mintable, admin, and trigger parameters.
+  /// @param _mintable A contract used as a target when calling mint.
+  /// @param _admin The address that will have admin privileges.
+  /// @param _targetAddresses The target contracts to call.
+  /// @param _calldatas The call data for the functions.
   constructor(
+    IMintable _mintable,
     address _admin,
     address[] memory _targetAddresses,
-    bytes[] memory _functionSignatures,
-    bytes[] memory _callDatas
+    bytes[] memory _calldatas,
+    uint256[] memory _values
   ) {
-    require(
-      _targetAddresses.length == _functionSignatures.length && _functionSignatures.length == _callDatas.length,
-      "Array lengths must match"
-    );
+    if (_admin == address(0)) {
+      revert ZkMinterModTriggerV1__InvalidAdmin();
+    }
 
-    admin = _admin;
+    if (_targetAddresses.length != _calldatas.length) {
+      revert ZkMinterModTriggerV1__ArrayLengthMismatch();
+    }
+
+    _updateMintable(_mintable);
+    _grantRole(DEFAULT_ADMIN_ROLE, _admin);
+    _grantRole(PAUSER_ROLE, _admin);
+
     targets = _targetAddresses;
-    functionSignatures = _functionSignatures;
-    callDatas = _callDatas;
+    calldatas = _calldatas;
+    values = _values;
   }
 
-  function setMinter(address _minter) external adminOnly {
-    minter = IZkCappedMinter(_minter);
-  }
+  /// @notice Mints tokens to this contract address.
+  /// @param _to The address that will receive the new tokens, must be address(this).
+  /// @param _amount The quantity of tokens that will be minted.
+  /// @dev Only callable by addresses with the MINTER_ROLE. Tokens are always minted to address(this).
+  function mint(address _to, uint256 _amount) public {
+    _revertIfClosed();
+    _requireNotPaused();
+    _checkRole(MINTER_ROLE, msg.sender);
 
-  function setTargets(address[] calldata _targets) external adminOnly {
-    targets = _targets;
-  }
-
-  function setAdmin(address _admin) external adminOnly {
-    admin = _admin;
-  }
-
-  function setFunctionSignatures(bytes[] calldata _functionSignatures) external adminOnly {
-    // Manually copy to avoid nested calldata issues
-    bytes[] memory newSignatures = new bytes[](_functionSignatures.length);
-    for (uint256 i = 0; i < _functionSignatures.length; i++) {
-      newSignatures[i] = _functionSignatures[i];
+    if (_to != address(this)) {
+      revert ZkMinterModTriggerV1__InvalidRecipient(_to, address(this));
     }
-    functionSignatures = newSignatures;
+
+    mintable.mint(_to, _amount);
+    emit Minted(msg.sender, _to, _amount);
   }
 
-  function setCallDatas(bytes[] calldata _callDatas) external adminOnly {
-    // Manually copy to avoid nested calldata issues
-    bytes[] memory newCallDatas = new bytes[](_callDatas.length);
-    for (uint256 i = 0; i < _callDatas.length; i++) {
-      newCallDatas[i] = _callDatas[i];
-    }
-    callDatas = newCallDatas;
-  }
+  /// @notice Executes all configured trigger calls.
+  /// @dev Only callable by addresses with the MINTER_ROLE.
+  function trigger() public payable {
+    _revertIfClosed();
+    _requireNotPaused();
+    _checkRole(MINTER_ROLE, msg.sender);
 
-  // Function to set all call parameters at once
-  function setCallParameters(
-    address[] calldata _targets,
-    bytes[] calldata _functionSignatures,
-    bytes[] calldata _callDatas
-  ) external adminOnly {
-    require(
-      _targets.length == _functionSignatures.length && _functionSignatures.length == _callDatas.length,
-      "Array lengths must match"
-    );
-    targets = _targets;
-
-    // Manually copy to avoid nested calldata issues
-    bytes[] memory newSignatures = new bytes[](_functionSignatures.length);
-    bytes[] memory newCallDatas = new bytes[](_callDatas.length);
-    for (uint256 i = 0; i < _functionSignatures.length; i++) {
-      newSignatures[i] = _functionSignatures[i];
-      newCallDatas[i] = _callDatas[i];
-    }
-    functionSignatures = newSignatures;
-    callDatas = newCallDatas;
-  }
-
-  // Function to approve and call with arbitrary calldata
-  function mint(uint256 _amount) external {
-    minter.mint(address(this), _amount);
-
-    require(
-      targets.length == functionSignatures.length && functionSignatures.length == callDatas.length,
-      "Array lengths must match"
-    );
-
-    // Iterate through all targets and execute calls
     for (uint256 i = 0; i < targets.length; i++) {
-      // Combine function signature with provided callData
-      bytes memory fullCallData = abi.encodePacked(functionSignatures[i], callDatas[i]);
-      (bool success,) = targets[i].call(fullCallData);
-      require(success, "Function call failed");
+      (bool success,) = targets[i].call{value: values[i]}(calldatas[i]);
+      if (!success) {
+        revert ZkMinterModTriggerV1__TriggerCallFailed(i, targets[i]);
+      }
     }
+
+    emit TriggerExecuted(msg.sender);
   }
+
+  /// @notice Mints tokens to this contract address and then executes all configured trigger calls.
+  /// @param _to The address that will receive the minted tokens, must be address(this).
+  /// @param _amount The quantity of tokens to mint.
+  /// @dev Only callable by addresses with the MINTER_ROLE.
+  function mintAndTrigger(address _to, uint256 _amount) public payable {
+    mint(_to, _amount);
+    trigger();
+  }
+
+  /// @notice Receives ETH.
+  receive() external payable {}
 }

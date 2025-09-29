@@ -1,343 +1,485 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.24;
 
-import "forge-std/Test.sol";
 import {ZkMinterModTriggerV1} from "src/ZkMinterModTriggerV1.sol";
-import {ZkMinterModTargetExampleV1} from "test/mocks/ZkMinterModTargetExampleV1.sol";
-import {MerkleDropFactory} from "test/helpers/MerkleDropFactory.sol";
-import {ZkCappedMinterV2} from "test/helpers/ZkCappedMinterV2.t.sol";
+import {ZkMinterV1} from "src/ZkMinterV1.sol";
+import {ZkCappedMinterV2Test} from "test/helpers/ZkCappedMinterV2.t.sol";
 import {IMintable} from "src/interfaces/IMintable.sol";
+import {MockTargetContract} from "test/helpers/MockTargetContract.sol";
 
-contract MockERC20 is Test {
-  mapping(address => uint256) public balanceOf;
-  mapping(address => mapping(address => uint256)) public allowance;
+contract ZkMinterModTriggerV1Test is ZkCappedMinterV2Test {
+  ZkMinterModTriggerV1 public minterTrigger;
+  IMintable public mintable;
+  MockTargetContract public mockTarget;
+  address public caller = makeAddr("caller");
 
-  function mint(address to, uint256 amount) external {
-    balanceOf[to] += amount;
-  }
+  address[] public targets;
+  bytes[] public calldatas;
+  uint256[] public values;
 
-  function approve(address spender, uint256 amount) external returns (bool) {
-    allowance[msg.sender][spender] = amount;
-    return true;
-  }
-
-  function transferFrom(address from, address to, uint256 amount) external returns (bool) {
-    require(allowance[from][msg.sender] >= amount, "Insufficient allowance");
-    require(balanceOf[from] >= amount, "Insufficient balance");
-    allowance[from][msg.sender] -= amount;
-    balanceOf[from] -= amount;
-    balanceOf[to] += amount;
-    return true;
-  }
-
-  function transfer(address to, uint256 amount) external returns (bool) {
-    require(balanceOf[msg.sender] >= amount, "Insufficient balance");
-    balanceOf[msg.sender] -= amount;
-    balanceOf[to] += amount;
-    return true;
-  }
-}
-
-contract ZkMinterModTriggerV1Test is Test {
-  ZkMinterModTriggerV1 public trigger;
-  ZkMinterModTargetExampleV1 public target;
-  MockERC20 public token;
-  address public user = address(0x123);
-
-  ZkCappedMinterV2 public cappedMinter;
-  address cappedMinterAdmin = makeAddr("cappedMinterAdmin");
-  bytes32 constant MINTER_ROLE = keccak256("MINTER_ROLE");
-
-  event TransferProcessed(address indexed sender, uint256 amount);
-
-  function setUp() public virtual {
-    token = new MockERC20();
-    target = new ZkMinterModTargetExampleV1(address(token));
-
-    // Prepare arrays for constructor: two calls
-    // 1. Approve on token contract
-    // 2. executeTransferAndLogic on target contract
-    address[] memory targetAddresses = new address[](2);
-    targetAddresses[0] = address(token); // Token contract for approve
-    targetAddresses[1] = address(target); // Target contract for executeTransferAndLogic
-
-    bytes[] memory functionSignatures = new bytes[](2);
-    functionSignatures[0] = abi.encodeWithSignature("approve(address,uint256)");
-    functionSignatures[1] = abi.encodeWithSignature("executeTransferAndLogic(uint256)");
-
-    bytes[] memory callDatas = new bytes[](2);
-    callDatas[0] = abi.encode(address(target), uint256(500 ether)); // Approve target to spend 500 ether
-    callDatas[1] = abi.encode(uint256(500 ether)); // Execute transfer of 500 ether
-
-    // Deploy ZkMinterModTriggerV1 with arrays
-    trigger = new ZkMinterModTriggerV1(cappedMinterAdmin, targetAddresses, functionSignatures, callDatas);
-
-    // Setup ZkCappedMinterV2
-    uint48 startTime = uint48(block.timestamp);
-    uint48 expirationTime = uint48(startTime + 3 days);
-    uint256 cap = 500e18;
-
-    cappedMinter = new ZkCappedMinterV2(
-      IMintable(address(token)), // Assuming MockERC20 is compatible with IMintable
-      cappedMinterAdmin,
-      cap,
-      startTime,
-      expirationTime
-    );
-    vm.prank(cappedMinterAdmin);
-    trigger.setMinter(address(cappedMinter));
-    vm.prank(cappedMinterAdmin);
-    cappedMinter.grantRole(MINTER_ROLE, address(trigger));
-  }
-
-  function test_MintFullBalance() public {
-    uint256 initialBalance = token.balanceOf(address(trigger));
-    assertEq(initialBalance, 0);
-
-    // Expect the event from TransferAndLogic
-    vm.expectEmit(true, false, false, true, address(target));
-    emit TransferProcessed(address(trigger), 500 ether);
-
-    // Call mint with the actual amount needed (500 ether)
-    vm.prank(user);
-    trigger.mint(500 ether); // Changed from 0 to 500 ether
-
-    // Verify tokens were transferred to the target
-    assertEq(token.balanceOf(address(trigger)), 0);
-    assertEq(token.balanceOf(address(target)), 500 ether);
-
-    // Verify allowance was set and consumed
-    assertEq(token.allowance(address(trigger), address(target)), 0);
-  }
-
-  function test_RevertWhen_MintExceedsCap() public {
-    // Deploy a new trigger with invalid call data (amount exceeds cap)
-    address[] memory targetAddresses = new address[](2);
-    targetAddresses[0] = address(token);
-    targetAddresses[1] = address(target);
-
-    bytes[] memory functionSignatures = new bytes[](2);
-    functionSignatures[0] = abi.encodeWithSignature("approve(address,uint256)");
-    functionSignatures[1] = abi.encodeWithSignature("executeTransferAndLogic(uint256)");
-
-    bytes[] memory callDatas = new bytes[](2);
-    callDatas[0] = abi.encode(address(target), uint256(500 ether));
-    callDatas[1] = abi.encode(uint256(500 ether));
-
-    ZkMinterModTriggerV1 badTrigger =
-      new ZkMinterModTriggerV1(cappedMinterAdmin, targetAddresses, functionSignatures, callDatas);
-
-    // Configure minter and roles
-    vm.prank(cappedMinterAdmin);
-    badTrigger.setMinter(address(cappedMinter));
-    vm.prank(cappedMinterAdmin);
-    cappedMinter.grantRole(MINTER_ROLE, address(badTrigger));
-
-    // Should revert due to function call failure (invalid target)
-    vm.prank(user);
-    vm.expectRevert(
-      abi.encodeWithSignature("ZkCappedMinterV2__CapExceeded(address,uint256)", address(badTrigger), 1000 ether)
-    );
-    badTrigger.mint(1000 ether); // Try to mint 1000 ether (exceeds cap of 500 ether)
-  }
-
-  function test_CallWithCustomCallData() public {
-    // Expect the event with the fixed amount from callData
-    vm.expectEmit(true, false, false, true, address(target));
-    emit TransferProcessed(address(trigger), 500 ether);
-
-    // Call initiateCall
-    vm.prank(user);
-    trigger.mint(500 ether);
-
-    // Verify token transfer
-    assertEq(token.balanceOf(address(trigger)), 0);
-    assertEq(token.balanceOf(address(target)), 500 ether);
-
-    // Verify allowance was set and consumed
-    assertEq(token.allowance(address(trigger), address(target)), 0);
-  }
-}
-
-contract MintFromZkCappedMinter is ZkMinterModTriggerV1Test {
   function setUp() public virtual override {
-    // Call parent setUp first
     super.setUp();
+    mintable = IMintable(address(cappedMinter));
+    mockTarget = new MockTargetContract();
+
+    targets = new address[](1);
+    targets[0] = address(mockTarget);
+
+    calldatas = new bytes[](1);
+    calldatas[0] = abi.encodeWithSelector(mockTarget.setValue.selector, 42);
+
+    values = new uint256[](1);
+    values[0] = 1 ether;
+
+    minterTrigger = new ZkMinterModTriggerV1(mintable, admin, targets, calldatas, values);
+    _grantMinterRole(cappedMinter, cappedMinterAdmin, address(minterTrigger));
   }
 
-  function test_MintFromCappedMinterAndInitiateCall() public {
-    // Verify initial state
-    assertEq(token.balanceOf(address(trigger)), 0);
-    assertEq(token.balanceOf(address(target)), 0);
+  function _grantTriggerMinterRole(address _minter) internal {
+    vm.prank(admin);
+    minterTrigger.grantRole(MINTER_ROLE, _minter);
+  }
 
-    // Expect the TransferProcessed event with the fixed amount
-    vm.expectEmit(true, false, false, true, address(target));
-    emit TransferProcessed(address(trigger), 500 ether);
-
-    // Execute the initiateCall flow
-    vm.prank(user);
-    trigger.mint(500 ether);
-
-    // Verify final state
-    assertEq(token.balanceOf(address(trigger)), 0);
-    assertEq(token.balanceOf(address(target)), 500 ether);
-    assertEq(token.allowance(address(trigger), address(target)), 0);
+  function test_InitializesMinterTriggerCorrectly() public view {
+    assertTrue(minterTrigger.hasRole(minterTrigger.DEFAULT_ADMIN_ROLE(), admin));
+    assertTrue(minterTrigger.hasRole(minterTrigger.PAUSER_ROLE(), admin));
+    assertEq(address(minterTrigger.mintable()), address(mintable));
+    assertEq(minterTrigger.targets(0), address(mockTarget));
+    assertEq(minterTrigger.calldatas(0), abi.encodeWithSelector(mockTarget.setValue.selector, 42));
+    assertEq(minterTrigger.values(0), 1 ether);
   }
 }
 
-contract MerkleTargetTest is Test {
-  ZkMinterModTriggerV1 public caller;
-  MerkleDropFactory public target;
-  MockERC20 public token;
-  address public user = address(0x123);
-  ZkCappedMinterV2 public cappedMinter;
-  address cappedMinterAdmin = makeAddr("cappedMinterAdmin");
-  bytes32 constant MINTER_ROLE = keccak256("MINTER_ROLE");
+contract Constructor is ZkMinterModTriggerV1Test {
+  function testFuzz_InitializesMinterTriggerCorrectly(
+    IMintable _mintable,
+    address _admin,
+    uint256 _setValue,
+    uint256 _value,
+    address _target2,
+    bytes memory _calldatas2,
+    uint256 _value2
+  ) public {
+    vm.assume(_admin != address(0));
 
-  event WithdrawalOccurred(uint256 indexed treeIndex, address indexed destination, uint256 value);
+    MockTargetContract _mockTarget = new MockTargetContract();
+    address[] memory _targets = new address[](2);
+    _targets[0] = address(_mockTarget);
+    _targets[1] = _target2;
 
-  function setUp() public virtual {
-    // Deploy the token and target contracts
-    token = new MockERC20();
-    target = new MerkleDropFactory();
+    bytes[] memory _calldatas = new bytes[](2);
+    _calldatas[0] = abi.encodeWithSelector(_mockTarget.setValue.selector, _setValue);
+    _calldatas[1] = _calldatas2;
 
-    // Setup Merkle tree parameters
-    uint256 withdrawAmount = 500 ether;
-    address destination = address(0x456); // Where tokens will go
-    bytes32 leaf = keccak256(abi.encode(destination, withdrawAmount));
-    bytes32 merkleRoot = leaf; // Simplest tree: root = leaf (single entry)
-    bytes32 ipfsHash = keccak256("ipfs data");
+    uint256[] memory _values = new uint256[](2);
+    _values[0] = _value;
+    _values[1] = _value2;
 
-    // Prepare arrays for constructor: two calls
-    // 1. Approve on token contract
-    // 2. addMerkleTree on target contract
-    address[] memory targetAddresses = new address[](2);
-    targetAddresses[0] = address(token); // Token contract for approve
-    targetAddresses[1] = address(target); // Target contract for addMerkleTree
+    ZkMinterModTriggerV1 _minterTrigger = new ZkMinterModTriggerV1(_mintable, _admin, _targets, _calldatas, _values);
 
-    bytes[] memory functionSignatures = new bytes[](2);
-    functionSignatures[0] = abi.encodeWithSignature("approve(address,uint256)");
-    functionSignatures[1] = abi.encodeWithSignature("addMerkleTree(bytes32,bytes32,address,uint256)");
-
-    bytes[] memory callDatas = new bytes[](2);
-    callDatas[0] = abi.encode(address(target), uint256(500 ether)); // Approve target to spend 500 ether
-    callDatas[1] = abi.encode(merkleRoot, ipfsHash, address(token), uint256(500 ether)); // Setup Merkle tree
-
-    // Deploy ZkMinterModTriggerV1 with arrays
-    caller = new ZkMinterModTriggerV1(cappedMinterAdmin, targetAddresses, functionSignatures, callDatas);
-
-    // Setup ZkCappedMinterV2
-    uint48 startTime = uint48(block.timestamp);
-    uint48 expirationTime = uint48(startTime + 3 days);
-    uint256 cap = 500e18;
-
-    cappedMinter = new ZkCappedMinterV2(IMintable(address(token)), cappedMinterAdmin, cap, startTime, expirationTime);
-
-    // Configure minter and roles
-    vm.prank(cappedMinterAdmin);
-    caller.setMinter(address(cappedMinter));
-    vm.prank(cappedMinterAdmin);
-    cappedMinter.grantRole(MINTER_ROLE, address(caller));
+    assertEq(address(_minterTrigger.mintable()), address(_mintable));
+    assertTrue(_minterTrigger.hasRole(_minterTrigger.DEFAULT_ADMIN_ROLE(), _admin));
+    assertEq(_minterTrigger.targets(0), address(_mockTarget));
+    assertEq(_minterTrigger.targets(1), _target2);
+    assertEq(_minterTrigger.calldatas(0), abi.encodeWithSelector(_mockTarget.setValue.selector, _setValue));
+    assertEq(_minterTrigger.calldatas(1), _calldatas2);
+    assertEq(_minterTrigger.values(0), _value);
+    assertEq(_minterTrigger.values(1), _value2);
+    vm.expectRevert(bytes(""));
+    _minterTrigger.values(2);
   }
 
-  function test_MintFromCappedMinterAndWithdrawFromMerkleDrop() public {
-    // Setup Merkle tree parameters
-    uint256 withdrawAmount = 500 ether;
-    address destination = address(0x456); // Where tokens will go
-    bytes32 leaf = keccak256(abi.encode(destination, withdrawAmount));
-    bytes32 merkleRoot = leaf; // Simplest tree: root = leaf (single entry)
-    bytes32 ipfsHash = keccak256("ipfs data");
+  function testFuzz_RevertIf_AdminIsZeroAddress(IMintable _mintable) public {
+    address[] memory _targets = new address[](1);
+    _targets[0] = address(mockTarget);
 
-    // Verify initial state
-    assertEq(token.balanceOf(address(caller)), 0);
-    assertEq(token.balanceOf(address(target)), 0);
-    assertEq(token.balanceOf(destination), 0);
-    assertEq(token.allowance(address(caller), address(target)), 0);
+    bytes[] memory _calldatas = new bytes[](1);
+    _calldatas[0] = abi.encodeWithSelector(mockTarget.setValue.selector, 42);
 
-    // Call initiateCall
-    vm.prank(user);
-    caller.mint(500 ether);
+    uint256[] memory _values = new uint256[](1);
+    _values[0] = 100 ether;
 
-    // Verify tokens were minted and transferred to target via addMerkleTree
-    assertEq(token.balanceOf(address(caller)), 0);
-    assertEq(token.balanceOf(address(target)), 500 ether);
-    assertEq(token.balanceOf(destination), 0);
-    assertEq(token.allowance(address(caller), address(target)), 0); // Allowance consumed by transferFrom
-
-    {
-      // Verify tree setup
-      (bytes32 merkleRoot1, bytes32 ipfsHash1, address tokenAddress1, uint256 tokenBalance1, uint256 spentTokens1) =
-        target.merkleTrees(1);
-      assertEq(merkleRoot1, merkleRoot);
-      assertEq(ipfsHash1, ipfsHash);
-      assertEq(tokenAddress1, address(token));
-      assertEq(tokenBalance1, 500 ether);
-      assertEq(spentTokens1, 0);
-    }
-
-    // Expect the WithdrawalOccurred event
-    vm.expectEmit(true, true, false, true, address(target));
-    emit WithdrawalOccurred(1, destination, withdrawAmount);
-
-    {
-      // Perform withdrawal
-      bytes32[] memory proof = new bytes32[](0); // Empty proof for single-leaf tree
-      vm.prank(destination); // Withdraw as the destination address
-      target.withdraw(1, destination, 500 ether, proof);
-
-      // Verify final balances
-      assertEq(token.balanceOf(address(caller)), 0);
-      assertEq(token.balanceOf(address(target)), 0);
-      assertEq(token.balanceOf(destination), 500 ether);
-    }
-    {
-      // Verify tree state after withdrawal
-      (bytes32 merkleRoot2, bytes32 ipfsHash2, address tokenAddress2, uint256 tokenBalance2, uint256 spentTokens2) =
-        target.merkleTrees(1);
-      assertEq(merkleRoot2, merkleRoot);
-      assertEq(ipfsHash2, ipfsHash);
-      assertEq(tokenAddress2, address(token));
-      assertEq(tokenBalance2, 0);
-      assertEq(spentTokens2, 500 ether);
-      assertTrue(target.getWithdrawn(1, leaf));
-    }
+    vm.expectRevert(ZkMinterModTriggerV1.ZkMinterModTriggerV1__InvalidAdmin.selector);
+    new ZkMinterModTriggerV1(_mintable, address(0), _targets, _calldatas, _values);
   }
 
-  function test_RevertWhen_ExceedsCap() public {
-    // Deploy a new caller with call data exceeding the cap
-    uint256 withdrawAmount = 600 ether; // Exceeds cap of 500 ether
-    address destination = address(0x456);
-    bytes32 leaf = keccak256(abi.encode(destination, withdrawAmount));
-    bytes32 merkleRoot = leaf;
-    bytes32 ipfsHash = keccak256("ipfs data");
+  function test_RevertIf_ArrayLengthMismatch() public {
+    address[] memory _targets = new address[](2);
+    _targets[0] = address(mockTarget);
+    _targets[1] = address(mockTarget);
 
-    address[] memory targetAddresses = new address[](2);
-    targetAddresses[0] = address(token);
-    targetAddresses[1] = address(target);
+    bytes[] memory _calldatas = new bytes[](1);
+    _calldatas[0] = abi.encodeWithSelector(mockTarget.setValue.selector, 42);
 
-    bytes[] memory functionSignatures = new bytes[](2);
-    functionSignatures[0] = abi.encodeWithSignature("approve(address,uint256)");
-    functionSignatures[1] = abi.encodeWithSignature("addMerkleTree(bytes32,bytes32,address,uint256)");
+    uint256[] memory _values = new uint256[](1);
+    _values[0] = 100 ether;
 
-    bytes[] memory callDatas = new bytes[](2);
-    callDatas[0] = abi.encode(address(target), uint256(600 ether)); // Approve 600 ether
-    callDatas[1] = abi.encode(merkleRoot, ipfsHash, address(token), uint256(600 ether)); // Try to setup tree with 600
-      // ether
+    vm.expectRevert(ZkMinterModTriggerV1.ZkMinterModTriggerV1__ArrayLengthMismatch.selector);
+    new ZkMinterModTriggerV1(mintable, admin, _targets, _calldatas, _values);
+  }
+}
 
-    ZkMinterModTriggerV1 badCaller =
-      new ZkMinterModTriggerV1(cappedMinterAdmin, targetAddresses, functionSignatures, callDatas);
+contract Mint is ZkMinterModTriggerV1Test {
+  address public minter = makeAddr("minter");
 
-    // Configure minter and roles
-    vm.prank(cappedMinterAdmin);
-    badCaller.setMinter(address(cappedMinter));
-    vm.prank(cappedMinterAdmin);
-    cappedMinter.grantRole(MINTER_ROLE, address(badCaller));
+  function setUp() public override {
+    super.setUp();
+    vm.startPrank(admin);
+    minterTrigger.grantRole(MINTER_ROLE, minter);
+    vm.stopPrank();
+  }
 
-    // Should revert due to exceeding cap
-    vm.prank(user);
+  function testFuzz_MintsSuccessfullyAsMinter(address _minter, uint256 _amount) public {
+    _amount = bound(_amount, 1, cappedMinter.CAP());
+    _grantTriggerMinterRole(_minter);
+    address _to = address(minterTrigger);
+
+    vm.prank(_minter);
+    minterTrigger.mint(_to, _amount);
+    assertEq(token.balanceOf(_to), _amount);
+  }
+
+  function testFuzz_EmitsMintedEvent(uint256 _amount) public {
+    _amount = bound(_amount, 1, cappedMinter.CAP());
+    address _to = address(minterTrigger);
+
+    vm.prank(minter);
+    vm.expectEmit();
+    emit ZkMinterV1.Minted(minter, _to, _amount);
+    minterTrigger.mint(_to, _amount);
+  }
+
+  function testFuzz_RevertIf_InvalidRecipient(address _to, uint256 _amount) public {
+    vm.assume(_to != address(minterTrigger));
+    _amount = bound(_amount, 1, cappedMinter.CAP());
+
+    vm.prank(minter);
     vm.expectRevert(
-      abi.encodeWithSignature("ZkCappedMinterV2__CapExceeded(address,uint256)", address(badCaller), 600 ether)
+      abi.encodeWithSelector(
+        ZkMinterModTriggerV1.ZkMinterModTriggerV1__InvalidRecipient.selector, _to, address(minterTrigger)
+      )
     );
-    badCaller.mint(600 ether);
+    minterTrigger.mint(_to, _amount);
+  }
+
+  function testFuzz_RevertIf_CalledByNonMinter(address _nonMinter, address _to, uint256 _amount) public {
+    vm.assume(_nonMinter != minter && _nonMinter != admin);
+
+    vm.prank(_nonMinter);
+    vm.expectRevert(_formatAccessControlError(_nonMinter, MINTER_ROLE));
+    minterTrigger.mint(_to, _amount);
+  }
+
+  function testFuzz_RevertIf_MintAfterContractIsPaused(address _caller, address _to, uint256 _amount) public {
+    vm.prank(admin);
+    minterTrigger.pause();
+
+    vm.prank(_caller);
+    vm.expectRevert("Pausable: paused");
+    minterTrigger.mint(_to, _amount);
+  }
+
+  function testFuzz_RevertIf_MintAfterContractIsClosed(address _caller, address _to, uint256 _amount) public {
+    vm.prank(admin);
+    minterTrigger.close();
+
+    vm.prank(_caller);
+    vm.expectRevert(ZkMinterV1.ZkMinter__ContractClosed.selector);
+    minterTrigger.mint(_to, _amount);
+  }
+}
+
+contract Trigger is ZkMinterModTriggerV1Test {
+  function setUp() public override {
+    super.setUp();
+    vm.prank(admin);
+    minterTrigger.grantRole(MINTER_ROLE, caller);
+    vm.deal(address(caller), 100 ether);
+  }
+
+  function testFuzz_TriggersSuccessfully(uint256 _value) public {
+    _value = bound(_value, 1 ether, 100_000 ether);
+    assertEq(mockTarget.value(), 0);
+    assertEq(mockTarget.called(), false);
+    assertEq(address(minterTrigger).balance, 0);
+
+    vm.deal(caller, _value);
+    vm.prank(caller);
+    minterTrigger.trigger{value: _value}();
+
+    assertEq(mockTarget.value(), 42);
+    assertEq(mockTarget.called(), true);
+    assertEq(mockTarget.lastCaller(), address(minterTrigger));
+    assertEq(address(mockTarget).balance, 1 ether);
+  }
+
+  function testFuzz_EmitsTriggerExecutedEvent(address _caller, uint256 _value) public {
+    _value = bound(_value, 1 ether, 100_000 ether);
+    deal(address(_caller), _value);
+    _grantTriggerMinterRole(_caller);
+
+    vm.expectEmit();
+    emit ZkMinterModTriggerV1.TriggerExecuted(_caller);
+    vm.prank(_caller);
+    minterTrigger.trigger{value: _value}();
+  }
+
+  function testFuzz_ExecutesMultipleTriggers(uint256 _value1, uint256 _value2) public {
+    _value1 = bound(_value1, 1 ether, 100_000 ether);
+    _value2 = bound(_value2, 1 ether, 100_000 ether);
+    MockTargetContract secondTarget = new MockTargetContract();
+
+    address[] memory _targets = new address[](2);
+    _targets[0] = address(mockTarget);
+    _targets[1] = address(secondTarget);
+
+    bytes[] memory _calldatas = new bytes[](2);
+    _calldatas[0] = abi.encodeWithSelector(mockTarget.setValue.selector, 42);
+    _calldatas[1] = abi.encodeWithSelector(secondTarget.setValue.selector, 100);
+
+    uint256[] memory _values = new uint256[](2);
+    _values[0] = _value1;
+    _values[1] = _value2;
+
+    vm.deal(address(caller), _value1 + _value2);
+
+    ZkMinterModTriggerV1 multiTrigger = new ZkMinterModTriggerV1(mintable, admin, _targets, _calldatas, _values);
+
+    vm.prank(admin);
+    multiTrigger.grantRole(MINTER_ROLE, caller);
+
+    vm.deal(caller, _value1 + _value2);
+    vm.prank(caller);
+    multiTrigger.trigger{value: _value1 + _value2}();
+
+    assertEq(mockTarget.value(), 42);
+    assertEq(mockTarget.called(), true);
+    assertEq(secondTarget.value(), 100);
+    assertEq(secondTarget.called(), true);
+  }
+
+  function testFuzz_RevertIf_TriggerAfterContractIsPaused(address _caller) public {
+    vm.prank(admin);
+    minterTrigger.pause();
+
+    vm.prank(_caller);
+    vm.expectRevert("Pausable: paused");
+    minterTrigger.trigger();
+  }
+
+  function testFuzz_RevertIf_TriggerAfterContractIsClosed(address _caller) public {
+    vm.prank(admin);
+    minterTrigger.close();
+
+    vm.prank(_caller);
+    vm.expectRevert(ZkMinterV1.ZkMinter__ContractClosed.selector);
+    minterTrigger.trigger();
+  }
+
+  function testFuzz_RevertIf_NotMinter(address _nonMinter) public {
+    vm.assume(_nonMinter != caller && _nonMinter != admin);
+
+    vm.prank(_nonMinter);
+    vm.expectRevert(_formatAccessControlError(_nonMinter, MINTER_ROLE));
+    minterTrigger.trigger();
+  }
+
+  function test_RevertIf_FunctionCallFails() public {
+    address[] memory _targets = new address[](1);
+    _targets[0] = address(mockTarget);
+
+    bytes[] memory _calldatas = new bytes[](1);
+    _calldatas[0] = abi.encodeWithSelector(mockTarget.revertFunction.selector);
+
+    uint256[] memory _values = new uint256[](1);
+    _values[0] = 100 ether;
+
+    ZkMinterModTriggerV1 failTrigger = new ZkMinterModTriggerV1(mintable, admin, _targets, _calldatas, _values);
+
+    vm.prank(admin);
+    failTrigger.grantRole(MINTER_ROLE, caller);
+
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        ZkMinterModTriggerV1.ZkMinterModTriggerV1__TriggerCallFailed.selector, 0, address(mockTarget)
+      )
+    );
+    vm.prank(caller);
+    failTrigger.trigger();
+  }
+}
+
+contract MintAndTrigger is ZkMinterModTriggerV1Test {
+  function setUp() public override {
+    super.setUp();
+    vm.prank(admin);
+    minterTrigger.grantRole(MINTER_ROLE, caller);
+  }
+
+  function testFuzz_MintsAndTriggersSuccessfully(uint256 _amount, uint256 _value) public {
+    _amount = bound(_amount, 1, cappedMinter.CAP());
+    _value = bound(_value, 1 ether, 100_000 ether);
+
+    assertEq(token.balanceOf(address(minterTrigger)), 0);
+    assertEq(mockTarget.value(), 0);
+    assertEq(mockTarget.called(), false);
+    assertEq(address(mockTarget).balance, 0);
+
+    vm.deal(caller, _value);
+    vm.prank(caller);
+    minterTrigger.mintAndTrigger{value: _value}(address(minterTrigger), _amount);
+
+    // Minted to the trigger contract.
+    assertEq(token.balanceOf(address(minterTrigger)), _amount);
+
+    // Trigger executed against the configured target with 1 ether.
+    assertEq(mockTarget.value(), 42);
+    assertEq(mockTarget.called(), true);
+    assertEq(mockTarget.lastCaller(), address(minterTrigger));
+    assertEq(address(mockTarget).balance, 1 ether);
+  }
+
+  function testFuzz_EmitsEvents(address _caller, uint256 _amount, uint256 _value) public {
+    _amount = bound(_amount, 1, cappedMinter.CAP());
+    _value = bound(_value, 1 ether, 100_000 ether);
+    _grantTriggerMinterRole(_caller);
+
+    vm.deal(_caller, _value);
+
+    vm.expectEmit();
+    emit ZkMinterV1.Minted(_caller, address(minterTrigger), _amount);
+    vm.expectEmit();
+    emit ZkMinterModTriggerV1.TriggerExecuted(_caller);
+
+    vm.prank(_caller);
+    minterTrigger.mintAndTrigger{value: _value}(address(minterTrigger), _amount);
+  }
+
+  function testFuzz_RevertIf_InvalidRecipient(address _to, uint256 _amount, uint256 _value) public {
+    vm.assume(_to != address(minterTrigger));
+    _amount = bound(_amount, 1, cappedMinter.CAP());
+    _value = bound(_value, 0, 100_000 ether);
+
+    vm.deal(caller, _value);
+    vm.prank(caller);
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        ZkMinterModTriggerV1.ZkMinterModTriggerV1__InvalidRecipient.selector, _to, address(minterTrigger)
+      )
+    );
+    minterTrigger.mintAndTrigger{value: _value}(_to, _amount);
+  }
+
+  function testFuzz_RevertIf_NotMinter(address _nonMinter, address _to, uint256 _amount, uint256 _value) public {
+    vm.assume(_nonMinter != caller && _nonMinter != admin);
+    _amount = bound(_amount, 0, cappedMinter.CAP());
+    _value = bound(_value, 0, 100_000 ether);
+
+    vm.deal(_nonMinter, _value);
+    vm.prank(_nonMinter);
+    vm.expectRevert(_formatAccessControlError(_nonMinter, MINTER_ROLE));
+    minterTrigger.mintAndTrigger{value: _value}(_to, _amount);
+  }
+
+  function testFuzz_RevertIf_Paused(address _to, uint256 _amount, uint256 _value) public {
+    _amount = bound(_amount, 0, cappedMinter.CAP());
+    _value = bound(_value, 0, 100_000 ether);
+
+    vm.prank(admin);
+    minterTrigger.pause();
+
+    vm.deal(caller, _value);
+    vm.prank(caller);
+    vm.expectRevert("Pausable: paused");
+    minterTrigger.mintAndTrigger{value: _value}(_to, _amount);
+  }
+
+  function testFuzz_RevertIf_Closed(address _to, uint256 _amount, uint256 _value) public {
+    _amount = bound(_amount, 0, cappedMinter.CAP());
+    _value = bound(_value, 0, 100_000 ether);
+
+    vm.prank(admin);
+    minterTrigger.close();
+
+    vm.deal(caller, _value);
+    vm.prank(caller);
+    vm.expectRevert(ZkMinterV1.ZkMinter__ContractClosed.selector);
+    minterTrigger.mintAndTrigger{value: _value}(_to, _amount);
+  }
+
+  function testFuzz_RevertIf_FunctionCallFails(uint256 _amount, uint256 _ethValue) public {
+    _amount = bound(_amount, 1, cappedMinter.CAP());
+    _ethValue = bound(_ethValue, 0, 100_000 ether);
+
+    address[] memory _targets = new address[](1);
+    _targets[0] = address(mockTarget);
+
+    bytes[] memory _calldatas = new bytes[](1);
+    _calldatas[0] = abi.encodeWithSelector(mockTarget.revertFunction.selector);
+
+    uint256[] memory _values = new uint256[](1);
+    _values[0] = _ethValue;
+
+    ZkMinterModTriggerV1 failTrigger = new ZkMinterModTriggerV1(mintable, admin, _targets, _calldatas, _values);
+
+    // Allow failTrigger to mint on the underlying cappedMinter and grant a caller minter role.
+    _grantMinterRole(cappedMinter, cappedMinterAdmin, address(failTrigger));
+    vm.prank(admin);
+    failTrigger.grantRole(MINTER_ROLE, caller);
+
+    vm.deal(caller, _ethValue);
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        ZkMinterModTriggerV1.ZkMinterModTriggerV1__TriggerCallFailed.selector, 0, address(mockTarget)
+      )
+    );
+    vm.prank(caller);
+    failTrigger.mintAndTrigger{value: _ethValue}(address(failTrigger), _amount);
+  }
+
+  function testFuzz_TokensTransferredAndCallExecuted(
+    address _recipient,
+    uint256 _amount,
+    uint256 _ethValue,
+    uint256 _setValue
+  ) public {
+    _amount = bound(_amount, 1, cappedMinter.CAP());
+    _ethValue = bound(_ethValue, 0, 1000 ether);
+    vm.assume(_recipient != address(0));
+
+    // Configure multi-step trigger: ERC20 transfer then mock target call with ETH
+    address[] memory _targets = new address[](2);
+    _targets[0] = address(token);
+    _targets[1] = address(mockTarget);
+
+    bytes[] memory _calldatas = new bytes[](2);
+    _calldatas[0] = abi.encodeWithSignature("transfer(address,uint256)", _recipient, _amount);
+    _calldatas[1] = abi.encodeWithSelector(mockTarget.setValue.selector, _setValue);
+
+    uint256[] memory _values = new uint256[](2);
+    _values[0] = 0;
+    _values[1] = _ethValue;
+
+    ZkMinterModTriggerV1 multiTrigger = new ZkMinterModTriggerV1(mintable, admin, _targets, _calldatas, _values);
+
+    // Set up role.
+    _grantMinterRole(cappedMinter, cappedMinterAdmin, address(multiTrigger));
+    vm.prank(admin);
+    multiTrigger.grantRole(MINTER_ROLE, caller);
+
+    // Execute mint and trigger.
+    vm.deal(caller, _ethValue);
+    vm.prank(caller);
+    multiTrigger.mintAndTrigger{value: _ethValue}(address(multiTrigger), _amount);
+
+    // Verify call and ETH transfer.
+    assertEq(mockTarget.value(), _setValue);
+    assertEq(mockTarget.called(), true);
+    assertEq(mockTarget.lastCaller(), address(multiTrigger));
+    assertEq(address(mockTarget).balance, _ethValue);
+
+    // Verify token transfer from trigger to recipient.
+    assertEq(token.balanceOf(address(multiTrigger)), 0);
+    assertEq(token.balanceOf(_recipient), _amount);
   }
 }
