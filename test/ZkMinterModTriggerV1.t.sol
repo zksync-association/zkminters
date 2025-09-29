@@ -85,6 +85,8 @@ contract Constructor is ZkMinterModTriggerV1Test {
     assertEq(_minterTrigger.calldatas(1), _calldatas2);
     assertEq(_minterTrigger.values(0), _value);
     assertEq(_minterTrigger.values(1), _value2);
+    vm.expectRevert(bytes(""));
+    _minterTrigger.values(2);
   }
 
   function testFuzz_RevertIf_AdminIsZeroAddress(IMintable _mintable) public {

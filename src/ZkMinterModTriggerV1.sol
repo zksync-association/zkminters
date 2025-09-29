@@ -13,7 +13,7 @@ contract ZkMinterModTriggerV1 is ZkMinterV1 {
   /// @notice The target contracts to call when trigger is executed.
   address[] public targets;
 
-  /// @notice The call data for the functions.
+  /// @notice The calldata for the functions.
   bytes[] public calldatas;
 
   /// @notice The values to send with the calls.
