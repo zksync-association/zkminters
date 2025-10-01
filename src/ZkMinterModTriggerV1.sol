@@ -87,7 +87,7 @@ contract ZkMinterModTriggerV1 is ZkMinterV1 {
   /// @param _to The address that will receive the new tokens, must be address(this).
   /// @param _amount The quantity of tokens that will be minted.
   /// @dev Only callable by addresses with the MINTER_ROLE. Tokens are always minted to address(this).
-  function mint(address _to, uint256 _amount) public {
+  function mint(address _to, uint256 _amount) public virtual {
     _revertIfClosed();
     _requireNotPaused();
     _checkRole(MINTER_ROLE, msg.sender);
@@ -102,7 +102,7 @@ contract ZkMinterModTriggerV1 is ZkMinterV1 {
 
   /// @notice Executes all configured trigger calls.
   /// @dev Only callable by addresses with the MINTER_ROLE.
-  function trigger() public payable {
+  function trigger() public payable virtual {
     _revertIfClosed();
     _requireNotPaused();
     _checkRole(MINTER_ROLE, msg.sender);
@@ -121,7 +121,7 @@ contract ZkMinterModTriggerV1 is ZkMinterV1 {
   /// @param _to The address that will receive the minted tokens, must be address(this).
   /// @param _amount The quantity of tokens to mint.
   /// @dev Only callable by addresses with the MINTER_ROLE.
-  function mintAndTrigger(address _to, uint256 _amount) public payable {
+  function mintAndTrigger(address _to, uint256 _amount) public payable virtual {
     mint(_to, _amount);
     trigger();
   }
@@ -129,12 +129,13 @@ contract ZkMinterModTriggerV1 is ZkMinterV1 {
   /// @notice Sends minted tokens held by this contract to the immutable recovery address.
   /// @param _amount The amount of tokens to send.
   /// @dev Only callable by addresses with the DEFAULT_ADMIN_ROLE.
-  function recoverTokens(address _token, uint256 _amount) external {
-    _revertIfClosed();
-    _requireNotPaused();
+  function recoverTokens(address _token, uint256 _amount) external virtual {
     _checkRole(DEFAULT_ADMIN_ROLE, msg.sender);
-
-    IERC20(_token).safeTransfer(RECOVERY_ADDRESS, _amount);
+    if (_token == address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE)) {
+      RECOVERY_ADDRESS.call{value: _amount}("");
+    } else {
+      IERC20(_token).safeTransfer(RECOVERY_ADDRESS, _amount);
+    }
     emit TokensRecovered(msg.sender, _token, _amount, RECOVERY_ADDRESS);
   }
 
