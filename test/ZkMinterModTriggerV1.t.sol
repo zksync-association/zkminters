@@ -527,11 +527,11 @@ contract RecoverTokens is ZkMinterModTriggerV1Test {
   }
 
   function testFuzz_SendsETHToRecoveryAddress(uint256 _amount) public {
-    _amount = bound(_amount, 1, type(uint256).max);
+    _amount = bound(_amount, 1, type(uint128).max);
     vm.deal(address(minterTrigger), _amount);
 
     vm.prank(admin);
-    minterTrigger.recoverTokens(address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE), _amount);
+    minterTrigger.recoverTokens(ETH, _amount);
 
     assertEq(address(minterTrigger).balance, 0);
     assertEq(address(recoveryAddress).balance, _amount);
@@ -550,14 +550,12 @@ contract RecoverTokens is ZkMinterModTriggerV1Test {
   }
 
   function testFuzz_EmitsTokensRecoveredEventForETH(uint256 _amount) public {
-    _amount = bound(_amount, 1, type(uint256).max);
+    _amount = bound(_amount, 1, type(uint128).max);
     vm.deal(address(minterTrigger), _amount);
 
     vm.prank(admin);
     vm.expectEmit();
-    emit ZkMinterModTriggerV1.TokensRecovered(
-      admin, address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE), _amount, recoveryAddress
-    );
+    emit ZkMinterModTriggerV1.TokensRecovered(admin, ETH, _amount, recoveryAddress);
     minterTrigger.recoverTokens(address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE), _amount);
   }
 
@@ -575,12 +573,12 @@ contract RecoverTokens is ZkMinterModTriggerV1Test {
   }
 
   function testFuzz_RevertIf_NotAdminForETH(address _nonAdmin, uint256 _amount) public {
-    _amount = bound(_amount, 1, type(uint256).max);
+    _amount = bound(_amount, 1, type(uint128).max);
     vm.deal(address(minterTrigger), _amount);
 
     vm.prank(_nonAdmin);
     vm.expectRevert(_formatAccessControlError(_nonAdmin, DEFAULT_ADMIN_ROLE));
-    minterTrigger.recoverTokens(address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE), _amount);
+    minterTrigger.recoverTokens(ETH, _amount);
   }
 
   function testFuzz_CanRecoverTokensAfterPaused(address _minter, uint256 _amount) public {
@@ -599,14 +597,14 @@ contract RecoverTokens is ZkMinterModTriggerV1Test {
   }
 
   function testFuzz_CanRecoverTokensAfterPausedForETH(uint256 _amount) public {
-    _amount = bound(_amount, 1, type(uint256).max);
+    _amount = bound(_amount, 1, type(uint128).max);
     vm.deal(address(minterTrigger), _amount);
 
     vm.prank(admin);
     minterTrigger.pause();
 
     vm.prank(admin);
-    minterTrigger.recoverTokens(address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE), _amount);
+    minterTrigger.recoverTokens(ETH, _amount);
     assertEq(address(minterTrigger).balance, 0);
     assertEq(address(recoveryAddress).balance, _amount);
   }
@@ -627,14 +625,14 @@ contract RecoverTokens is ZkMinterModTriggerV1Test {
   }
 
   function testFuzz_CanRecoverTokensAfterClosedForETH(uint256 _amount) public {
-    _amount = bound(_amount, 1, type(uint256).max);
+    _amount = bound(_amount, 1, type(uint128).max);
     vm.deal(address(minterTrigger), _amount);
 
     vm.prank(admin);
     minterTrigger.close();
 
     vm.prank(admin);
-    minterTrigger.recoverTokens(address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE), _amount);
+    minterTrigger.recoverTokens(ETH, _amount);
     assertEq(address(minterTrigger).balance, 0);
     assertEq(address(recoveryAddress).balance, _amount);
   }
