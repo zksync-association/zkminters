@@ -559,7 +559,9 @@ contract RecoverTokens is ZkMinterModTriggerV1Test {
     minterTrigger.recoverTokens(address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE), _amount);
   }
 
-  function testFuzz_RevertIf_NotAdmin(address _nonAdmin, address _minter, uint256 _amount) public {
+  function testFuzz_RevertIf_CallerIsNotAdmin(address _nonAdmin, address _minter, address _token, uint256 _amount)
+    public
+  {
     _grantMinterRole(_minter);
     vm.assume(_nonAdmin != admin);
 
@@ -569,10 +571,10 @@ contract RecoverTokens is ZkMinterModTriggerV1Test {
 
     vm.prank(_nonAdmin);
     vm.expectRevert(_formatAccessControlError(_nonAdmin, DEFAULT_ADMIN_ROLE));
-    minterTrigger.recoverTokens(address(token), _amount);
+    minterTrigger.recoverTokens(_token, _amount);
   }
 
-  function testFuzz_RevertIf_NotAdminForETH(address _nonAdmin, uint256 _amount) public {
+  function testFuzz_RevertIf_CallerIsNotAdminWhenRecoveringETH(address _nonAdmin, uint256 _amount) public {
     _amount = bound(_amount, 1, type(uint128).max);
     vm.deal(address(minterTrigger), _amount);
 

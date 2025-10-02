@@ -23,7 +23,7 @@ contract ZkMinterModTriggerV1 is ZkMinterV1 {
   /// @notice The values to send with the calls.
   uint256[] public values;
 
-  /// @notice The immutable address where tokens can be recovered to.
+  /// @notice The immutable address where tokens where recovered tokens are sent.
   address public immutable RECOVERY_ADDRESS;
 
   /// @notice Emitted when trigger is executed.
