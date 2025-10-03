@@ -3,6 +3,8 @@ pragma solidity 0.8.24;
 
 import {IMintable} from "src/interfaces/IMintable.sol";
 import {ZkMinterV1} from "src/ZkMinterV1.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /// @title ZkMinterModTriggerV1
 /// @author [ScopeLift](https://scopelift.co)
@@ -10,6 +12,8 @@ import {ZkMinterV1} from "src/ZkMinterV1.sol";
 /// @dev This contract should typically be placed at the beginning of the mint chain.
 /// @custom:security-contact security@matterlabs.dev
 contract ZkMinterModTriggerV1 is ZkMinterV1 {
+  using SafeERC20 for IERC20;
+
   /// @notice The target contracts to call when trigger is executed.
   address[] public targets;
 
@@ -19,8 +23,14 @@ contract ZkMinterModTriggerV1 is ZkMinterV1 {
   /// @notice The values to send with the calls.
   uint256[] public values;
 
+  /// @notice The immutable address where tokens where recovered tokens are sent.
+  address public immutable RECOVERY_ADDRESS;
+
   /// @notice Emitted when trigger is executed.
   event TriggerExecuted(address indexed caller);
+
+  /// @notice Emitted when tokens are sent to the immutable recovery address.
+  event TokensRecovered(address indexed admin, address indexed token, uint256 amount, address indexed recoveryAddress);
 
   /// @notice Error for when a function call fails.
   error ZkMinterModTriggerV1__TriggerCallFailed(uint256 index, address target);
@@ -34,17 +44,22 @@ contract ZkMinterModTriggerV1 is ZkMinterV1 {
   /// @notice Error for when array lengths don't match.
   error ZkMinterModTriggerV1__ArrayLengthMismatch();
 
+  /// @notice Error for when the recovery address is the zero address.
+  error ZkMinterModTriggerV1__InvalidRecoveryAddress();
+
   /// @notice Initializes the trigger contract with mintable, admin, and trigger parameters.
   /// @param _mintable A contract used as a target when calling mint.
   /// @param _admin The address that will have admin privileges.
   /// @param _targetAddresses The target contracts to call.
   /// @param _calldatas The call data for the functions.
+  /// @param _recoveryAddress The immutable address where minted tokens can be sent.
   constructor(
     IMintable _mintable,
     address _admin,
     address[] memory _targetAddresses,
     bytes[] memory _calldatas,
-    uint256[] memory _values
+    uint256[] memory _values,
+    address _recoveryAddress
   ) {
     if (_admin == address(0)) {
       revert ZkMinterModTriggerV1__InvalidAdmin();
@@ -54,6 +69,10 @@ contract ZkMinterModTriggerV1 is ZkMinterV1 {
       revert ZkMinterModTriggerV1__ArrayLengthMismatch();
     }
 
+    if (_recoveryAddress == address(0)) {
+      revert ZkMinterModTriggerV1__InvalidRecoveryAddress();
+    }
+
     _updateMintable(_mintable);
     _grantRole(DEFAULT_ADMIN_ROLE, _admin);
     _grantRole(PAUSER_ROLE, _admin);
@@ -61,13 +80,14 @@ contract ZkMinterModTriggerV1 is ZkMinterV1 {
     targets = _targetAddresses;
     calldatas = _calldatas;
     values = _values;
+    RECOVERY_ADDRESS = _recoveryAddress;
   }
 
   /// @notice Mints tokens to this contract address.
   /// @param _to The address that will receive the new tokens, must be address(this).
   /// @param _amount The quantity of tokens that will be minted.
   /// @dev Only callable by addresses with the MINTER_ROLE. Tokens are always minted to address(this).
-  function mint(address _to, uint256 _amount) public {
+  function mint(address _to, uint256 _amount) public virtual {
     _revertIfClosed();
     _requireNotPaused();
     _checkRole(MINTER_ROLE, msg.sender);
@@ -82,7 +102,7 @@ contract ZkMinterModTriggerV1 is ZkMinterV1 {
 
   /// @notice Executes all configured trigger calls.
   /// @dev Only callable by addresses with the MINTER_ROLE.
-  function trigger() public payable {
+  function trigger() public payable virtual {
     _revertIfClosed();
     _requireNotPaused();
     _checkRole(MINTER_ROLE, msg.sender);
@@ -101,9 +121,22 @@ contract ZkMinterModTriggerV1 is ZkMinterV1 {
   /// @param _to The address that will receive the minted tokens, must be address(this).
   /// @param _amount The quantity of tokens to mint.
   /// @dev Only callable by addresses with the MINTER_ROLE.
-  function mintAndTrigger(address _to, uint256 _amount) public payable {
+  function mintAndTrigger(address _to, uint256 _amount) public payable virtual {
     mint(_to, _amount);
     trigger();
+  }
+
+  /// @notice Sends minted tokens held by this contract to the immutable recovery address.
+  /// @param _amount The amount of tokens to send.
+  /// @dev Only callable by addresses with the DEFAULT_ADMIN_ROLE.
+  function recoverTokens(address _token, uint256 _amount) external virtual {
+    _checkRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    if (_token == address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE)) {
+      RECOVERY_ADDRESS.call{value: _amount}("");
+    } else {
+      IERC20(_token).safeTransfer(RECOVERY_ADDRESS, _amount);
+    }
+    emit TokensRecovered(msg.sender, _token, _amount, RECOVERY_ADDRESS);
   }
 
   /// @notice Receives ETH.
