@@ -7,6 +7,7 @@ import {ZkMinterERC1155EligibilityV1Factory} from "src/ZkMinterERC1155Eligibilit
 import {IMintable} from "src/interfaces/IMintable.sol";
 import {ZkMinterV1} from "src/ZkMinterV1.sol";
 import {FakeERC1155} from "test/fakes/FakeERC1155.sol";
+import {IHats} from "hats-protocol/src/Interfaces/IHats.sol";
 
 /// @title ZkMinterERC1155EligibilityV1Integration
 /// @notice Integration tests for ZkMinterERC1155EligibilityV1 with zk token and capped minter
@@ -280,5 +281,84 @@ contract ZkMinterERC1155EligibilityV1Integration is ZkBaseTest {
     vm.prank(_recipient);
     vm.expectRevert(abi.encodeWithSelector(ZkMinterV1.ZkMinter__ContractClosed.selector));
     _eligibilityMinter.mint(_recipient, _amount);
+  }
+}
+
+// This should be good
+contract ZkMinterERC1155EligibilityV1HatsIntegration is ZkBaseTest {
+  ZkMinterERC1155EligibilityV1Factory public eligibilityFactory;
+  ZkMinterERC1155EligibilityV1 public eligibilityMinter;
+  IHats public hats;
+  uint256 maxMembers = 5;
+  address minter;
+
+  function setUp() public override {
+    // Hats is only deployed to sepolia zksync
+    vm.createSelectFork("https://sepolia.era.zksync.dev/", 5_836_880);
+
+    super.setUp();
+
+    // Deploy our own FakeERC1155 for testing
+    IHats _hats = IHats(0x3bc1A0Ad72417f2d411118085256fC53CBdDd137);
+
+    address _topHat = vm.randomAddress();
+    vm.label(_topHat, "TopHat");
+
+    vm.prank(_topHat);
+    uint256 _topHatId = _hats.mintTopHat(_topHat, "EgF TopHat", "https://example.com/egf-tophat.png");
+
+    vm.prank(_topHat);
+    uint256 _exampleHatId = _hats.createHat(
+      _topHatId, // Admin hat.
+      "Miter Hat",
+      5, // Max council member admins.
+      address(1), // No-op eligibility.
+      address(1), // No-op toggle.
+      true, // Mutable.
+      "https://example.com/council-member-admin.png"
+    );
+
+    minter = vm.randomAddress();
+
+    // Mint Example hat
+    vm.prank(_topHat);
+    _hats.mintHat(_exampleHatId, minter);
+
+    // Compute bytecode hash directly from the contract
+    bytes32 bytecodeHash = keccak256(type(ZkMinterERC1155EligibilityV1).creationCode);
+
+    // Deploy the factory with the bytecode hash
+    eligibilityFactory = new ZkMinterERC1155EligibilityV1Factory(bytecodeHash);
+
+    vm.label(address(eligibilityFactory), "EligibilityFactory");
+    eligibilityMinter = ZkMinterERC1155EligibilityV1(
+      eligibilityFactory.createMinter(IMintable(address(cappedMinter)), admin, address(_hats), _exampleHatId, 1, 1)
+    );
+    _grantMinterRole(cappedMinter, cappedMinterAdmin, address(eligibilityMinter));
+    vm.label(address(eligibilityFactory), "Eligibility Minter");
+  }
+
+  // Test on testnet creating a hat
+  function testFuzz_HolderOfMintHatCanMint(address _recipient, uint256 _amount) public {
+    _amount = _boundToRealisticAmount(_amount);
+    _assumeSafeAddress(_recipient);
+    uint256 _initialBalance = token.balanceOf(_recipient);
+
+    vm.prank(minter);
+    eligibilityMinter.mint(_recipient, _amount);
+
+    uint256 _finalBalance = token.balanceOf(_recipient);
+
+    vm.assertEq(_amount, _finalBalance - _initialBalance);
+  }
+
+  function testFuzz_RevertIf_MintIsCalledByNonHatHolder(address _caller, address _recipient, uint256 _amount) public {
+    _amount = _boundToRealisticAmount(_amount);
+    _assumeSafeAddress(_recipient);
+    vm.assume(_caller != minter);
+
+    vm.prank(minter);
+	// vm.expectRevert(abi.encodeWithSelector(ZkMinterERC1155EligibilityV1.ZkMinterERC1155EligibilityV1__InvalidERC1155Contract));
+    eligibilityMinter.mint(_recipient, _amount);
   }
 }

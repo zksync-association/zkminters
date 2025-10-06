@@ -72,11 +72,6 @@ contract ZkMinterERC1155EligibilityV1 is ZkMinterV1 {
       revert ZkMinterERC1155EligibilityV1__InvalidZeroAddress();
     }
 
-    // Verify the provided address implements ERC1155
-    if (!IERC165(_erc1155).supportsInterface(type(IERC1155).interfaceId)) {
-      revert ZkMinterERC1155EligibilityV1__InvalidERC1155Contract();
-    }
-
     ERC1155 = IERC1155(_erc1155);
     _updateMintable(_mintable);
     _updateTokenId(_tokenId);
