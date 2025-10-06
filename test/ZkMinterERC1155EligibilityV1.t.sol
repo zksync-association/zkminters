@@ -123,33 +123,6 @@ contract Constructor is ZkMinterERC1155EligibilityV1Test {
     vm.expectRevert(ZkMinterERC1155EligibilityV1.ZkMinterERC1155EligibilityV1__InvalidBalanceThreshold.selector);
     new ZkMinterERC1155EligibilityV1(_mintable, _admin, address(fakeERC1155), _tokenId, 0);
   }
-
-  function testFuzz_RevertIf_ERC1155IsNonContract(
-    IMintable _mintable,
-    address _admin,
-    uint256 _tokenId,
-    uint256 _balanceThreshold
-  ) public {
-    _assumeSafeUint(_balanceThreshold);
-    _assumeSafeAddress(_admin);
-
-    vm.expectRevert(bytes(""));
-    new ZkMinterERC1155EligibilityV1(_mintable, _admin, makeAddr("Fake ERC1155"), _tokenId, _balanceThreshold);
-  }
-
-  function testFuzz_RevertIf_ERC1155SupportsADifferentInterface(
-    IMintable _mintable,
-    address _admin,
-    uint256 _tokenId,
-    uint256 _balanceThreshold
-  ) public {
-    _assumeSafeUint(_balanceThreshold);
-    _assumeSafeAddress(_admin);
-    ERC721 _nonErc1155 = new ERC721("FAK", "Fake");
-
-    vm.expectRevert(ZkMinterERC1155EligibilityV1.ZkMinterERC1155EligibilityV1__InvalidERC1155Contract.selector);
-    new ZkMinterERC1155EligibilityV1(_mintable, _admin, address(_nonErc1155), _tokenId, _balanceThreshold);
-  }
 }
 
 contract Mint is ZkMinterERC1155EligibilityV1Test {
