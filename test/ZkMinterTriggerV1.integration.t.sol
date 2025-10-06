@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import {ZkMinterModTriggerV1} from "src/ZkMinterModTriggerV1.sol";
-import {ZkMinterModTriggerV1Test} from "test/ZkMinterModTriggerV1.t.sol";
+import {ZkMinterTriggerV1} from "src/ZkMinterTriggerV1.sol";
+import {ZkMinterTriggerV1Test} from "test/ZkMinterTriggerV1.t.sol";
 
-contract ZkMinterModTriggerV1Integration is ZkMinterModTriggerV1Test {
-  function testFuzz_TokensSentToTargetWhenMintedAndTriggered(
+contract ZkMinterTriggerV1Integration is ZkMinterTriggerV1Test {
+  function testFuzz_TokensAreSentToTargetWhenMintedAndTriggered(
     address _caller,
     address _recipient,
     uint256 _amount,
@@ -13,7 +13,7 @@ contract ZkMinterModTriggerV1Integration is ZkMinterModTriggerV1Test {
     uint256 _setValue
   ) public {
     _amount = bound(_amount, 1, cappedMinter.CAP());
-    _ethValue = bound(_ethValue, 0, 1000 ether);
+    _ethValue = bound(_ethValue, 0, 1000e18);
     vm.assume(_recipient != address(0));
 
     // Create a trigger that first transfers ERC20 tokens from the trigger to the mock target,
@@ -30,8 +30,8 @@ contract ZkMinterModTriggerV1Integration is ZkMinterModTriggerV1Test {
     _values[0] = 0;
     _values[1] = _ethValue;
 
-    ZkMinterModTriggerV1 _multiTrigger =
-      new ZkMinterModTriggerV1(mintable, admin, _targets, _calldatas, _values, recoveryAddress);
+    ZkMinterTriggerV1 _multiTrigger =
+      new ZkMinterTriggerV1(mintable, admin, _targets, _calldatas, _values, recoveryAddress);
 
     // Configure roles
     _grantMinterRole(cappedMinter, cappedMinterAdmin, address(_multiTrigger));
