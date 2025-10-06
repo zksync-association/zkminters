@@ -59,10 +59,7 @@ contract ZkCappedMinterV3 is ZkMinterV1 {
     START_TIME = _startTime;
     EXPIRATION_TIME = _expirationTime;
 
-    // Initialize the updatable mintable reference from the base contract to the same initial value.
     _updateMintable(_mintable);
-
-    // Initial roles: support multiple admins by allowing DEFAULT_ADMIN_ROLE to be granted later as needed.
     _grantRole(DEFAULT_ADMIN_ROLE, _admin);
     _grantRole(PAUSER_ROLE, _admin);
   }
@@ -85,7 +82,6 @@ contract ZkCappedMinterV3 is ZkMinterV1 {
 
     minted += _amount;
 
-    // Use the updatable mintable reference from the base to allow composition.
     mintable.mint(_to, _amount);
     emit Minted(msg.sender, _to, _amount);
   }
