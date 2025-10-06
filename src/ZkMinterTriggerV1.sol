@@ -65,7 +65,7 @@ contract ZkMinterTriggerV1 is ZkMinterV1 {
       revert ZkMinterTriggerV1__InvalidAdmin();
     }
 
-    if (_targetAddresses.length != _calldatas.length) {
+    if (_targetAddresses.length != _calldatas.length || _calldatas.length != _values.length) {
       revert ZkMinterTriggerV1__ArrayLengthMismatch();
     }
 
