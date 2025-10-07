@@ -242,14 +242,6 @@ contract Mint is ZkMinterTriggerV1Test {
 }
 
 contract Trigger is ZkMinterTriggerV1Test {
-  function setUp() public override {
-    super.setUp();
-    vm.prank(admin);
-    // Remove this pattern let's not rely on global state
-    minterTrigger.grantRole(MINTER_ROLE, caller);
-    vm.deal(address(caller), 100e18);
-  }
-
   function testFuzz_TriggersSuccessfully(uint256 _value, address _caller) public {
     _assumeSafeAddress(_caller);
 	_value = _boundTriggerValue(_value);
@@ -257,7 +249,7 @@ contract Trigger is ZkMinterTriggerV1Test {
 
     assertEq(mockTarget.value(), 0);
     assertEq(mockTarget.called(), false);
-    assertEq(address(minterTrigger).balance, 0);
+    assertEq(address(mockTarget).balance, 0);
 
     vm.deal(_caller, _value);
     vm.prank(_caller);
@@ -270,7 +262,8 @@ contract Trigger is ZkMinterTriggerV1Test {
   }
 
   function testFuzz_EmitsTriggerExecutedEvent(address _caller, uint256 _value) public {
-	_value = _boundToRealisticAmount(_value);
+    _assumeSafeAddress(_caller);
+	_value = _boundTriggerValue(_value);
     deal(address(_caller), _value);
     _grantTriggerMinterRole(_caller);
 
@@ -505,6 +498,7 @@ contract MintAndTrigger is ZkMinterTriggerV1Test {
     _amount = bound(_amount, 1, cappedMinter.CAP());
     _ethValue = bound(_ethValue, 0, 1000 ether);
     vm.assume(_recipient != address(0));
+	uint256 _initialRecipientBalance = token.balanceOf(_recipient);
 
     // Configure multi-step trigger: ERC20 transfer then mock target call with ETH
     address[] memory _targets = new address[](2);
@@ -540,7 +534,7 @@ contract MintAndTrigger is ZkMinterTriggerV1Test {
 
     // Verify token transfer from trigger to recipient.
     assertEq(token.balanceOf(address(multiTrigger)), 0);
-    assertEq(token.balanceOf(_recipient), _amount);
+    assertEq(token.balanceOf(_recipient), _initialRecipientBalance + _amount);
   }
 }
 
