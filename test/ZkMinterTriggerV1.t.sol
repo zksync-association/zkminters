@@ -42,6 +42,10 @@ contract ZkMinterTriggerV1Test is ZkBaseTest {
     minterTrigger.grantRole(MINTER_ROLE, _minter);
   }
 
+  function _grantCappedMinterRole(address _minter) internal {
+    _grantMinterRole(cappedMinter, cappedMinterAdmin, _minter);
+  }
+
   function _boundTriggerValue(uint256 _value) internal returns (uint256) {
     return bound(_value, 1e18, 10_000_000e18);
   }
@@ -535,7 +539,7 @@ contract RecoverTokens is ZkMinterTriggerV1Test {
   address public ETH = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 
   function testFuzz_SendsTokensToRecoveryAddress(address _minter, uint256 _amount) public {
-    _grantMinterRole(_minter);
+    _grantCappedMinterRole(_minter);
     _amount = _boundToRealisticAmount(_amount);
     vm.prank(_minter);
     minterTrigger.mint(address(minterTrigger), _amount);
@@ -559,7 +563,7 @@ contract RecoverTokens is ZkMinterTriggerV1Test {
   }
 
   function testFuzz_EmitsTokensRecoveredEvent(address _minter, uint256 _amount) public {
-    _grantMinterRole(_minter);
+    _grantCappedMinterRole(_minter);
     _amount = _boundToRealisticAmount(_amount);
     vm.prank(_minter);
     minterTrigger.mint(address(minterTrigger), _amount);
@@ -583,7 +587,7 @@ contract RecoverTokens is ZkMinterTriggerV1Test {
   function testFuzz_RevertIf_CallerIsNotAdmin(address _nonAdmin, address _minter, address _token, uint256 _amount)
     public
   {
-    _grantMinterRole(_minter);
+    _grantCappedMinterRole(_minter);
     vm.assume(_nonAdmin != admin);
 
     _amount = _boundToRealisticAmount(_amount);
@@ -605,7 +609,7 @@ contract RecoverTokens is ZkMinterTriggerV1Test {
   }
 
   function testFuzz_CanRecoverTokensAfterPaused(address _minter, uint256 _amount) public {
-    _grantMinterRole(_minter);
+    _grantCappedMinterRole(_minter);
     _amount = _boundToRealisticAmount(_amount);
     vm.prank(_minter);
     minterTrigger.mint(address(minterTrigger), _amount);
@@ -633,7 +637,7 @@ contract RecoverTokens is ZkMinterTriggerV1Test {
   }
 
   function testFuzz_CanRecoverTokensAfterClosed(address _minter, uint256 _amount) public {
-    _grantMinterRole(_minter);
+    _grantCappedMinterRole(_minter);
     _amount = _boundToRealisticAmount(_amount);
     vm.prank(_minter);
     minterTrigger.mint(address(minterTrigger), _amount);
