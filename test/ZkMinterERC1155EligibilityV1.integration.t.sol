@@ -358,7 +358,9 @@ contract ZkMinterERC1155EligibilityV1HatsIntegration is ZkBaseTest {
     vm.assume(_caller != minter);
 
     vm.prank(_caller);
-    vm.expectRevert(abi.encodeWithSelector(ZkMinterERC1155EligibilityV1.ZkMinterERC1155EligibilityV1__InsufficientBalance.selector));
+    vm.expectRevert(
+      abi.encodeWithSelector(ZkMinterERC1155EligibilityV1.ZkMinterERC1155EligibilityV1__InsufficientBalance.selector)
+    );
     eligibilityMinter.mint(_recipient, _amount);
   }
 }
