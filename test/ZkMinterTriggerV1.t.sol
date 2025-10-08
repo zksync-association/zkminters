@@ -540,6 +540,7 @@ contract RecoverTokens is ZkMinterTriggerV1Test {
 
   function testFuzz_SendsTokensToRecoveryAddress(address _minter, uint256 _amount) public {
     _grantCappedMinterRole(_minter);
+    _grantTriggerMinterRole(_minter);
     _amount = _boundToRealisticAmount(_amount);
     vm.prank(_minter);
     minterTrigger.mint(address(minterTrigger), _amount);
@@ -564,6 +565,7 @@ contract RecoverTokens is ZkMinterTriggerV1Test {
 
   function testFuzz_EmitsTokensRecoveredEvent(address _minter, uint256 _amount) public {
     _grantCappedMinterRole(_minter);
+    _grantTriggerMinterRole(_minter);
     _amount = _boundToRealisticAmount(_amount);
     vm.prank(_minter);
     minterTrigger.mint(address(minterTrigger), _amount);
@@ -588,6 +590,7 @@ contract RecoverTokens is ZkMinterTriggerV1Test {
     public
   {
     _grantCappedMinterRole(_minter);
+    _grantTriggerMinterRole(_minter);
     vm.assume(_nonAdmin != admin);
 
     _amount = _boundToRealisticAmount(_amount);
@@ -610,6 +613,7 @@ contract RecoverTokens is ZkMinterTriggerV1Test {
 
   function testFuzz_CanRecoverTokensAfterPaused(address _minter, uint256 _amount) public {
     _grantCappedMinterRole(_minter);
+    _grantTriggerMinterRole(_minter);
     _amount = _boundToRealisticAmount(_amount);
     vm.prank(_minter);
     minterTrigger.mint(address(minterTrigger), _amount);
@@ -638,6 +642,7 @@ contract RecoverTokens is ZkMinterTriggerV1Test {
 
   function testFuzz_CanRecoverTokensAfterClosed(address _minter, uint256 _amount) public {
     _grantCappedMinterRole(_minter);
+    _grantTriggerMinterRole(_minter);
     _amount = _boundToRealisticAmount(_amount);
     vm.prank(_minter);
     minterTrigger.mint(address(minterTrigger), _amount);
