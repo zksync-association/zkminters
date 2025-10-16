@@ -15,14 +15,14 @@ import {IMintable} from "src/interfaces/IMintable.sol";
 /// - `createMinter(IMintable,bytes)` for unified factory compatibility
 /// @custom:security-contact security@matterlabs.dev
 contract ZkMinterTriggerV1Factory is IZkMinterV1Factory {
-  /*///////////////////////////////////////////////////////////////
+  /* ///////////////////////////////////////////////////////////////
                   Immutable Variables
   //////////////////////////////////////////////////////////////*/
 
   /// @dev Bytecode hash is derived at deployment time from the compiled contract bytecode.
   bytes32 public immutable BYTECODE_HASH;
 
-  /*///////////////////////////////////////////////////////////////
+  /* ///////////////////////////////////////////////////////////////
                           Events
   //////////////////////////////////////////////////////////////*/
 
@@ -44,7 +44,7 @@ contract ZkMinterTriggerV1Factory is IZkMinterV1Factory {
     address recovery
   );
 
-  /*///////////////////////////////////////////////////////////////
+  /* ///////////////////////////////////////////////////////////////
                           Constructor
   //////////////////////////////////////////////////////////////*/
 
@@ -54,7 +54,7 @@ contract ZkMinterTriggerV1Factory is IZkMinterV1Factory {
     BYTECODE_HASH = _bytecodeHash;
   }
 
-  /*///////////////////////////////////////////////////////////////
+  /* ///////////////////////////////////////////////////////////////
                           External Functions
   //////////////////////////////////////////////////////////////*/
 
@@ -80,16 +80,21 @@ contract ZkMinterTriggerV1Factory is IZkMinterV1Factory {
       _createMinter(_mintable, _admin, _targets, _calldatas, _values, _recoveryAddress, _saltNonce);
   }
 
-  /// @notice Deploys a new `ZkMinterTriggerV1` contract using `CREATE2`. This overload accepts encoded args so it can be
-  /// composed inside higher level factories.
+  /// @notice Deploys a new `ZkMinterTriggerV1` contract using `CREATE2`. This overload accepts encoded args so it can
+  /// be composed inside higher level factories.
   /// @param _mintable A contract used as a target when calling mint.
   /// @param _args Encoded args: `(address admin, address[] targets, bytes[] calldatas, uint256[] values,
   /// address recoveryAddress, uint256 saltNonce)`.
   /// @return The address of the newly deployed `ZkMinterTriggerV1`.
   function createMinter(IMintable _mintable, bytes memory _args) external returns (address) {
-    (address _admin, address[] memory _targets, bytes[] memory _calldatas, uint256[] memory _values,
-      address _recoveryAddress, uint256 _saltNonce) =
-      abi.decode(_args, (address, address[], bytes[], uint256[], address, uint256));
+    (
+      address _admin,
+      address[] memory _targets,
+      bytes[] memory _calldatas,
+      uint256[] memory _values,
+      address _recoveryAddress,
+      uint256 _saltNonce
+    ) = abi.decode(_args, (address, address[], bytes[], uint256[], address, uint256));
 
     return _createMinter(_mintable, _admin, _targets, _calldatas, _values, _recoveryAddress, _saltNonce);
   }
@@ -121,7 +126,7 @@ contract ZkMinterTriggerV1Factory is IZkMinterV1Factory {
     );
   }
 
-  /*///////////////////////////////////////////////////////////////
+  /* ///////////////////////////////////////////////////////////////
                           Internal Functions
   //////////////////////////////////////////////////////////////*/
 
