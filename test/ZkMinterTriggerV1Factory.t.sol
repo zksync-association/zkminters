@@ -61,8 +61,7 @@ contract CreateMinter is ZkMinterTriggerV1FactoryTest {
     (address[] memory targets, bytes[] memory calldatas, uint256[] memory values) =
       _buildSingleTriggerParams(_target, _calldata, _value);
 
-    address minterAddress =
-      factory.createMinter(_mintable, _admin, targets, calldatas, values, _recovery, _saltNonce);
+    address minterAddress = factory.createMinter(_mintable, _admin, targets, calldatas, values, _recovery, _saltNonce);
 
     ZkMinterTriggerV1 minter = ZkMinterTriggerV1(payable(minterAddress));
 
@@ -89,8 +88,7 @@ contract CreateMinter is ZkMinterTriggerV1FactoryTest {
     (address[] memory targets, bytes[] memory calldatas, uint256[] memory values) =
       _buildSingleTriggerParams(_target, _calldata, _value);
 
-    address expectedAddress =
-      factory.getMinter(_mintable, _admin, targets, calldatas, values, _recovery, _saltNonce);
+    address expectedAddress = factory.getMinter(_mintable, _admin, targets, calldatas, values, _recovery, _saltNonce);
 
     vm.expectEmit();
     emit ZkMinterTriggerV1Factory.MinterTriggerCreated(
@@ -142,8 +140,7 @@ contract CreateMinter is ZkMinterTriggerV1FactoryTest {
     (address[] memory targets, bytes[] memory calldatas, uint256[] memory values) =
       _buildSingleTriggerParams(_target, _calldata, _value);
 
-    address expectedAddress =
-      factory.getMinter(_mintable, _admin, targets, calldatas, values, _recovery, _saltNonce);
+    address expectedAddress = factory.getMinter(_mintable, _admin, targets, calldatas, values, _recovery, _saltNonce);
 
     vm.expectEmit();
     emit ZkMinterTriggerV1Factory.MinterTriggerCreated(
@@ -220,11 +217,9 @@ contract GetMinter is ZkMinterTriggerV1FactoryTest {
     (address[] memory targets, bytes[] memory calldatas, uint256[] memory values) =
       _buildSingleTriggerParams(_target, _calldata, _value);
 
-    address expected =
-      factory.getMinter(_mintable, _admin, targets, calldatas, values, _recovery, _saltNonce);
+    address expected = factory.getMinter(_mintable, _admin, targets, calldatas, values, _recovery, _saltNonce);
 
-    address deployed =
-      factory.createMinter(_mintable, _admin, targets, calldatas, values, _recovery, _saltNonce);
+    address deployed = factory.createMinter(_mintable, _admin, targets, calldatas, values, _recovery, _saltNonce);
 
     assertEq(deployed, expected);
   }
