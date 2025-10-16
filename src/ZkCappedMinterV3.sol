@@ -11,10 +11,10 @@ import {IMintable} from "src/interfaces/IMintable.sol";
 /// restriction on granting DEFAULT_ADMIN_ROLE).
 /// @custom:security-contact security@matterlabs.dev
 contract ZkCappedMinterV3 is ZkMinterV1 {
-  /// @notice The maximum number of tokens that may be minted by the ZkCappedMinter.
+  /// @notice The maximum number of tokens that may be minted by the `ZkCappedMinter`.
   uint256 public immutable CAP;
 
-  /// @notice The cumulative number of tokens that have been minted by the ZkCappedMinter.
+  /// @notice The cumulative number of tokens that have been minted by the `ZkCappedMinter`.
   uint256 public minted = 0;
 
   /// @notice The timestamp when minting can begin.
@@ -41,10 +41,10 @@ contract ZkCappedMinterV3 is ZkMinterV1 {
   /// @notice Error for when the start time is greater than or equal to expiration time, or start time is in the past.
   error ZkCappedMinterV3__InvalidTime();
 
-  /// @notice Constructor for a new ZkCappedMinterV3 contract
+  /// @notice Constructor for a new `ZkCappedMinterV3` contract
   /// @param _mintable The contract where tokens will be minted.
   /// @param _admin The address that will be granted the initial admin and pauser roles.
-  /// @param _cap The maximum number of tokens that may be minted by the ZkCappedMinter.
+  /// @param _cap The maximum number of tokens that may be minted by the `ZkCappedMinter`.
   /// @param _startTime The timestamp when minting can begin.
   /// @param _expirationTime The timestamp after which minting is no longer allowed (inclusive).
   constructor(IMintable _mintable, address _admin, uint256 _cap, uint48 _startTime, uint48 _expirationTime) {
@@ -90,6 +90,8 @@ contract ZkCappedMinterV3 is ZkMinterV1 {
   /// @param _uri The new metadata URI.
   /// @dev Only callable by addresses with the DEFAULT_ADMIN_ROLE.
   function setMetadataURI(string memory _uri) external {
+    _revertIfClosed();
+    _requireNotPaused();
     _checkRole(DEFAULT_ADMIN_ROLE, msg.sender);
     metadataURI = _uri;
     emit MetadataURISet(_uri);

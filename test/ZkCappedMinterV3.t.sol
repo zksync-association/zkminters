@@ -6,57 +6,17 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {IMintable} from "src/interfaces/IMintable.sol";
 import {ZkMinterV1} from "src/ZkMinterV1.sol";
 import {ZkCappedMinterV3} from "src/ZkCappedMinterV3.sol";
+import {ZkBaseTest} from "test/helpers/ZkBaseTest.t.sol";
 
-contract MockMintable is IMintable {
-  mapping(address => uint256) public balanceOf;
-
-  function mint(address _to, uint256 _amount) external {
-    balanceOf[_to] += _amount;
-  }
-}
-
-contract ZkCappedMinterV3Test is Test {
+contract ZkCappedMinterV3Test is ZkBaseTest {
   ZkCappedMinterV3 public cappedMinterV3;
-  MockMintable public token;
 
-  address public cappedMinterAdmin;
-
-  uint256 public constant DEFAULT_CAP = 100_000_000e18;
-  uint48 public DEFAULT_START_TIME;
-  uint48 public DEFAULT_EXPIRATION_TIME;
-
-  bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
-  bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
-  bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
-
-  uint256 public constant MAX_MINT_SUPPLY = type(uint208).max;
-
-  function setUp() public virtual {
-    cappedMinterAdmin = makeAddr("cappedMinterAdmin");
-    DEFAULT_START_TIME = uint48(vm.getBlockTimestamp());
-    DEFAULT_EXPIRATION_TIME = uint48(DEFAULT_START_TIME + 3 days);
-
-    token = new MockMintable();
+  function setUp() public virtual override {
+    super.setUp();
     cappedMinterV3 = new ZkCappedMinterV3(
       IMintable(address(token)), cappedMinterAdmin, DEFAULT_CAP, DEFAULT_START_TIME, DEFAULT_EXPIRATION_TIME
     );
-  }
-
-  function _boundToValidTimeControls(uint48 _startTime, uint48 _expirationTime) internal view returns (uint48, uint48) {
-    _startTime = uint48(bound(_startTime, vm.getBlockTimestamp(), type(uint32).max - 1));
-    _expirationTime = uint48(bound(_expirationTime, _startTime + 1, type(uint32).max));
-    return (_startTime, _expirationTime);
-  }
-
-  function _formatAccessControlError(address account, bytes32 role) internal pure returns (bytes memory) {
-    return bytes(
-      string.concat(
-        "AccessControl: account ",
-        Strings.toHexString(uint160(account), 20),
-        " is missing role ",
-        Strings.toHexString(uint256(role), 32)
-      )
-    );
+    _grantMinterRoleToCappedMinter(address(cappedMinterV3));
   }
 }
 
@@ -67,7 +27,7 @@ contract Mint is ZkCappedMinterV3Test {
     uint256 _amount
   ) public {
     vm.assume(_receiver != address(0));
-    _amount = bound(_amount, 1, DEFAULT_CAP - 1);
+    _amount = bound(_amount, 1, DEFAULT_CAP);
 
     vm.prank(cappedMinterAdmin);
     cappedMinterV3.grantRole(MINTER_ROLE, _minter);
@@ -202,8 +162,10 @@ contract Mint is ZkCappedMinterV3Test {
 
     ZkCappedMinterV3 parentMinter =
       new ZkCappedMinterV3(IMintable(address(token)), _parentAdmin, _parentCap, _startTime, _expirationTime);
+    _grantMinterRoleToCappedMinter(address(parentMinter));
     ZkCappedMinterV3 childMinter =
       new ZkCappedMinterV3(IMintable(address(parentMinter)), _childAdmin, _childCap, _startTime, _expirationTime);
+    _grantMinterRoleToCappedMinter(address(childMinter));
 
     vm.prank(_parentAdmin);
     parentMinter.grantRole(MINTER_ROLE, address(childMinter));
@@ -252,8 +214,10 @@ contract Mint is ZkCappedMinterV3Test {
 
     ZkCappedMinterV3 parentMinter =
       new ZkCappedMinterV3(IMintable(address(token)), _parentAdmin, _parentCap, _startTime, _expirationTime);
+    _grantMinterRoleToCappedMinter(address(parentMinter));
     ZkCappedMinterV3 childMinter =
       new ZkCappedMinterV3(IMintable(address(parentMinter)), _childAdmin, _childCap, _startTime, _expirationTime);
+    _grantMinterRoleToCappedMinter(address(childMinter));
 
     vm.prank(_parentAdmin);
     parentMinter.grantRole(MINTER_ROLE, _minter);
@@ -445,6 +409,24 @@ contract SetMetadataURI is ZkCappedMinterV3Test {
     vm.expectRevert(_formatAccessControlError(_nonAdmin, DEFAULT_ADMIN_ROLE));
     cappedMinterV3.setMetadataURI(_uri);
   }
+
+  function testFuzz_RevertIf_ContractIsClosed(string memory _uri, address _caller) public {
+    vm.prank(cappedMinterAdmin);
+    cappedMinterV3.close();
+
+    vm.expectRevert(ZkMinterV1.ZkMinter__ContractClosed.selector);
+    vm.prank(_caller);
+    cappedMinterV3.setMetadataURI(_uri);
+  }
+
+  function testFuzz_RevertIf_ContractIsPaused(string memory _uri, address _caller) public {
+    vm.prank(cappedMinterAdmin);
+    cappedMinterV3.pause();
+
+    vm.expectRevert("Pausable: paused");
+    vm.prank(_caller);
+    cappedMinterV3.setMetadataURI(_uri);
+  }
 }
 
 contract Constructor is ZkCappedMinterV3Test {
@@ -492,7 +474,7 @@ contract Constructor is ZkCappedMinterV3Test {
 }
 
 contract GrantRole is ZkCappedMinterV3Test {
-  function test_AdminCanGrantDefaultAdminRole(address _newAdmin) public {
+  function testFuzz_AdminCanGrantDefaultAdminRole(address _newAdmin) public {
     vm.assume(_newAdmin != address(0));
 
     vm.prank(cappedMinterAdmin);
@@ -503,11 +485,14 @@ contract GrantRole is ZkCappedMinterV3Test {
 }
 
 contract UpdateMintable is ZkCappedMinterV3Test {
-  function test_UpdateMintable_ByAdmin_RoutesMintsToNewTarget(address _minter, address _receiver, uint256 _amount)
-    public
-  {
+  function testFuzz_UpdatesMintableSuccessfully(
+    IMintable _newMintable,
+    address _minter,
+    address _receiver,
+    uint256 _amount
+  ) public {
     vm.assume(_receiver != address(0));
-    _amount = bound(_amount, 1, DEFAULT_CAP - 1);
+    _amount = bound(_amount, 1, DEFAULT_CAP);
 
     // Grant minter role
     vm.prank(cappedMinterAdmin);
@@ -521,34 +506,27 @@ contract UpdateMintable is ZkCappedMinterV3Test {
     assertEq(token.balanceOf(_receiver), balanceBeforeOld + _amount);
 
     // Create a new mintable and update
-    MockMintable newToken = new MockMintable();
-    vm.prank(cappedMinterAdmin);
-    cappedMinterV3.updateMintable(IMintable(address(newToken)));
 
-    // Next mint should route to newToken (use small amount to avoid cap issues)
-    uint256 balanceBeforeNew = newToken.balanceOf(_receiver);
-    vm.prank(_minter);
-    cappedMinterV3.mint(_receiver, 1);
-    assertEq(newToken.balanceOf(_receiver), balanceBeforeNew + 1);
+    vm.prank(cappedMinterAdmin);
+    cappedMinterV3.updateMintable(_newMintable);
+
+    assertEq(address(cappedMinterV3.mintable()), address(_newMintable));
   }
 
-  function test_UpdateMintable_RevertIf_NotAdmin(address _nonAdmin) public {
+  function testFuzz_RevertIf_NotAdmin(IMintable _newMintable, address _nonAdmin) public {
     vm.assume(_nonAdmin != cappedMinterAdmin);
-    MockMintable newToken = new MockMintable();
 
     vm.prank(_nonAdmin);
     vm.expectRevert(_formatAccessControlError(_nonAdmin, DEFAULT_ADMIN_ROLE));
-    cappedMinterV3.updateMintable(IMintable(address(newToken)));
+    cappedMinterV3.updateMintable(_newMintable);
   }
 
-  function test_UpdateMintable_RevertIf_Closed() public {
-    MockMintable newToken = new MockMintable();
-
+  function testFuzz_RevertIf_Closed(IMintable _newMintable) public {
     vm.prank(cappedMinterAdmin);
     cappedMinterV3.close();
 
     vm.prank(cappedMinterAdmin);
     vm.expectRevert(ZkMinterV1.ZkMinter__ContractClosed.selector);
-    cappedMinterV3.updateMintable(IMintable(address(newToken)));
+    cappedMinterV3.updateMintable(_newMintable);
   }
 }

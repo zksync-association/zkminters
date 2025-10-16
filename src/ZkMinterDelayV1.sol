@@ -32,7 +32,7 @@ struct MintRequest {
 /// - The delay period can be updated by admins (affects all pending requests)
 /// @custom:security-contact security@matterlabs.dev
 contract ZkMinterDelayV1 is ZkMinterV1 {
-  /*///////////////////////////////////////////////////////////////
+  /* ///////////////////////////////////////////////////////////////
                           Events
   //////////////////////////////////////////////////////////////*/
 
@@ -50,7 +50,7 @@ contract ZkMinterDelayV1 is ZkMinterV1 {
   /// DEFAULT_ADMIN_ROLE.
   bytes32 public constant VETO_ROLE = keccak256("VETO_ROLE");
 
-  /*///////////////////////////////////////////////////////////////
+  /* ///////////////////////////////////////////////////////////////
                           Errors
   //////////////////////////////////////////////////////////////*/
 
@@ -76,7 +76,7 @@ contract ZkMinterDelayV1 is ZkMinterV1 {
   /// @param _mintRequestId The mint request id.
   error ZkMinterDelayV1__MintRequestVetoed(uint256 _mintRequestId);
 
-  /*///////////////////////////////////////////////////////////////
+  /* ///////////////////////////////////////////////////////////////
                           State Variables
   //////////////////////////////////////////////////////////////*/
 
@@ -89,7 +89,7 @@ contract ZkMinterDelayV1 is ZkMinterV1 {
   /// @notice A mapping of mint request id to the mint request.
   mapping(uint256 mintRequestId => MintRequest) internal mintRequests;
 
-  /*///////////////////////////////////////////////////////////////
+  /* ///////////////////////////////////////////////////////////////
                           Constructor
   //////////////////////////////////////////////////////////////*/
 
@@ -111,7 +111,7 @@ contract ZkMinterDelayV1 is ZkMinterV1 {
     _grantRole(VETO_ROLE, _admin);
   }
 
-  /*///////////////////////////////////////////////////////////////
+  /* ///////////////////////////////////////////////////////////////
                           External Functions
   //////////////////////////////////////////////////////////////*/
 
@@ -131,8 +131,9 @@ contract ZkMinterDelayV1 is ZkMinterV1 {
     uint48 _createdAt = uint48(block.timestamp);
     uint256 currentRequestId = nextMintRequestId++;
 
-    mintRequests[currentRequestId] =
-      MintRequest({minter: msg.sender, to: _to, amount: _amount, createdAt: _createdAt, executed: false, vetoed: false});
+    mintRequests[currentRequestId] = MintRequest({
+      minter: msg.sender, to: _to, amount: _amount, createdAt: _createdAt, executed: false, vetoed: false
+    });
 
     emit MintRequested(currentRequestId, _to, _amount, _createdAt + mintDelay);
   }
@@ -216,7 +217,7 @@ contract ZkMinterDelayV1 is ZkMinterV1 {
     emit MintRequestVetoed(_mintRequestId);
   }
 
-  /*///////////////////////////////////////////////////////////////
+  /* ///////////////////////////////////////////////////////////////
                           Internal Functions
   //////////////////////////////////////////////////////////////*/
 
