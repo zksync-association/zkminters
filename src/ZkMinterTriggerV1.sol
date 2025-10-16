@@ -23,7 +23,7 @@ contract ZkMinterTriggerV1 is ZkMinterV1 {
   /// @notice The values to send with the calls.
   uint256[] public values;
 
-  /// @notice The immutable address where tokens where recovered tokens are sent.
+  /// @notice The immutable address where tokens are sent when recovered.
   address public immutable RECOVERY_ADDRESS;
 
   /// @notice Emitted when trigger is executed.
@@ -52,6 +52,7 @@ contract ZkMinterTriggerV1 is ZkMinterV1 {
   /// @param _admin The address that will have admin privileges.
   /// @param _targetAddresses The target contracts to call.
   /// @param _calldatas The call data for the functions.
+  /// @param _values The ETH values to send with the calls.
   /// @param _recoveryAddress The immutable address where minted tokens can be sent.
   constructor(
     IMintable _mintable,
@@ -127,6 +128,7 @@ contract ZkMinterTriggerV1 is ZkMinterV1 {
   }
 
   /// @notice Sends minted tokens held by this contract to the immutable recovery address.
+  /// @param _token Address of the token to send.
   /// @param _amount The amount of tokens to send.
   /// @dev Only callable by addresses with the DEFAULT_ADMIN_ROLE.
   function recoverTokens(address _token, uint256 _amount) external virtual {
