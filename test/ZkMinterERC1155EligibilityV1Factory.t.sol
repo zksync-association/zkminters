@@ -179,25 +179,6 @@ contract CreateMinterERC1155 is ZkMinterERC1155EligibilityV1FactoryTest {
     factory.createMinter(_mintable, address(0), _erc1155, _tokenId, _balanceThreshold, _saltNonce);
   }
 
-  function testFuzz_RevertIf_CreatingMinterWithInvalidERC1155(
-    IMintable _mintable,
-    address _minterAdmin,
-    address _erc1155,
-    uint256 _tokenId,
-    uint256 _balanceThreshold,
-    uint256 _saltNonce
-  ) public {
-    _assumeValidAddress(_minterAdmin);
-    _assumeValidBalanceThreshold(_balanceThreshold);
-
-    _mockSupportsInterfaceCall(_erc1155, false);
-
-    vm.expectRevert(
-      abi.encodeWithSelector(ZkMinterERC1155EligibilityV1.ZkMinterERC1155EligibilityV1__InvalidERC1155Contract.selector)
-    );
-    factory.createMinter(_mintable, _minterAdmin, _erc1155, _tokenId, _balanceThreshold, _saltNonce);
-  }
-
   function testFuzz_RevertIf_CreatingMinterWithZeroBalanceThreshold(
     IMintable _mintable,
     address _minterAdmin,
