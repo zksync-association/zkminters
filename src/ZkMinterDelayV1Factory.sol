@@ -115,8 +115,8 @@ contract ZkMinterDelayV1Factory is IZkMinterV1Factory {
   {
     bytes32 _salt = _calculateSalt(_saltNonce);
 
-    ZkMinterDelayV1 instance = new ZkMinterDelayV1{salt: _salt}(_mintable, _admin, _mintDelay);
-    _minterDelayAddress = address(instance);
+    ZkMinterDelayV1 _instance = new ZkMinterDelayV1{salt: _salt}(_mintable, _admin, _mintDelay);
+    _minterDelayAddress = address(_instance);
 
     emit MinterDelayCreated(_minterDelayAddress, _mintable, _admin, _mintDelay);
   }

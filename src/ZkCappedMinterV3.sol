@@ -9,6 +9,8 @@ import {IMintable} from "src/interfaces/IMintable.sol";
 /// @notice A contract to allow a permissioned entity to mint ZK tokens up to a given amount (the cap).
 /// @dev V3 preserves the features of V2 while extending the ZkMinterV1 base and supporting multiple admins (no
 /// restriction on granting DEFAULT_ADMIN_ROLE).
+/// @dev This minter is based off of ZkCappedMinterV2 which can be found
+/// [here](https://github.com/zksync-association/zk-governance/blob/b1d1bdce1def3c036c06e449787a3763bf47e766/l2-contracts/src/ZkCappedMinterV2.sol).
 /// @custom:security-contact security@matterlabs.dev
 contract ZkCappedMinterV3 is ZkMinterV1 {
   /// @notice The maximum number of tokens that may be minted by the `ZkCappedMinter`.
