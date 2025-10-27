@@ -13,6 +13,8 @@ import {IMintable} from "src/interfaces/IMintable.sol";
 /// The factory supports two deployment methods:
 /// - `createMinter(IMintable,address,uint256,uint48,uint48,uint256)` for strongly typed params
 /// - `createMinter(IMintable,bytes)` for unified factory compatibility
+/// @dev This factory is based off of ZkCappedMinterV2 which can be found
+/// [here](https://github.com/zksync-association/zk-governance/blob/b1d1bdce1def3c036c06e449787a3763bf47e766/l2-contracts/test/ZkCappedMinterV2Factory.t.sol).
 /// @custom:security-contact security@matterlabs.dev
 contract ZkCappedMinterV3Factory is IZkMinterV1Factory {
   /* ///////////////////////////////////////////////////////////////
@@ -33,7 +35,7 @@ contract ZkCappedMinterV3Factory is IZkMinterV1Factory {
   /// @param cap The maximum number of tokens that may be minted.
   /// @param startTime The timestamp when minting can begin.
   /// @param expirationTime The timestamp after which minting is no longer allowed (inclusive).
-  event CappedMinterCreated(
+  event MinterCappedCreated(
     address indexed cappedMinter,
     IMintable mintable,
     address admin,
@@ -140,7 +142,6 @@ contract ZkCappedMinterV3Factory is IZkMinterV1Factory {
     ZkCappedMinterV3 instance = new ZkCappedMinterV3{salt: _salt}(_mintable, _admin, _cap, _startTime, _expirationTime);
     _cappedMinterAddress = address(instance);
 
-    emit CappedMinterCreated(_cappedMinterAddress, _mintable, _admin, _cap, _startTime, _expirationTime);
+    emit MinterCappedCreated(_cappedMinterAddress, _mintable, _admin, _cap, _startTime, _expirationTime);
   }
 }
-

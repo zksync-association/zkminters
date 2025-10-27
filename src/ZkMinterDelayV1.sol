@@ -131,9 +131,8 @@ contract ZkMinterDelayV1 is ZkMinterV1 {
     uint48 _createdAt = uint48(block.timestamp);
     uint256 currentRequestId = nextMintRequestId++;
 
-    mintRequests[currentRequestId] = MintRequest({
-      minter: msg.sender, to: _to, amount: _amount, createdAt: _createdAt, executed: false, vetoed: false
-    });
+    mintRequests[currentRequestId] =
+      MintRequest({minter: msg.sender, to: _to, amount: _amount, createdAt: _createdAt, executed: false, vetoed: false});
 
     emit MintRequested(currentRequestId, _to, _amount, _createdAt + mintDelay);
   }

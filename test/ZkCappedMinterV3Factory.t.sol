@@ -60,7 +60,7 @@ contract CreateCappedMinter is ZkCappedMinterV3FactoryTest {
     assertEq(_minter.EXPIRATION_TIME(), _expirationTime);
   }
 
-  function testFuzz_EmitsCappedMinterCreatedEvent(
+  function testFuzz_EmitsMinterCappedCreatedEvent(
     IMintable _mintable,
     address _minterAdmin,
     uint256 _cap,
@@ -75,7 +75,7 @@ contract CreateCappedMinter is ZkCappedMinterV3FactoryTest {
       factory.getMinter(_mintable, _minterAdmin, _cap, _startTime, _expirationTime, _saltNonce);
 
     vm.expectEmit();
-    emit ZkCappedMinterV3Factory.CappedMinterCreated(
+    emit ZkCappedMinterV3Factory.MinterCappedCreated(
       _expectedMinterAddress, _mintable, _minterAdmin, _cap, _startTime, _expirationTime
     );
 
@@ -105,7 +105,7 @@ contract CreateCappedMinter is ZkCappedMinterV3FactoryTest {
     assertEq(_minter.EXPIRATION_TIME(), _expirationTime);
   }
 
-  function testFuzz_EmitsCappedMinterCreatedEventWithBytesArgs(
+  function testFuzz_EmitsMinterCappedCreatedEventWithBytesArgs(
     IMintable _mintable,
     address _minterAdmin,
     uint256 _cap,
@@ -120,7 +120,7 @@ contract CreateCappedMinter is ZkCappedMinterV3FactoryTest {
       factory.getMinter(_mintable, _minterAdmin, _cap, _startTime, _expirationTime, _saltNonce);
 
     vm.expectEmit();
-    emit ZkCappedMinterV3Factory.CappedMinterCreated(
+    emit ZkCappedMinterV3Factory.MinterCappedCreated(
       _expectedMinterAddress, _mintable, _minterAdmin, _cap, _startTime, _expirationTime
     );
 
