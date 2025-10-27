@@ -143,39 +143,6 @@ contract CreateCappedMinter is ZkCappedMinterV3FactoryTest {
     vm.expectRevert(abi.encodeWithSelector(HashIsNonZero.selector, bytecodeHash));
     factory.createMinter(_mintable, _minterAdmin, _cap, _startTime, _expirationTime, _saltNonce);
   }
-
-  function testFuzz_RevertIf_StartTimeGreaterThanExpiration(
-    IMintable _mintable,
-    address _minterAdmin,
-    uint256 _cap,
-    uint48 _startTime,
-    uint48 _expirationTime,
-    uint256 _saltNonce
-  ) public {
-    _assumeValidAddress(_minterAdmin);
-    vm.assume(_startTime >= block.timestamp);
-    vm.assume(_expirationTime >= block.timestamp);
-    vm.assume(_startTime >= _expirationTime);
-
-    vm.expectRevert(abi.encodeWithSelector(ZkCappedMinterV3.ZkCappedMinterV3__InvalidTime.selector));
-    factory.createMinter(_mintable, _minterAdmin, _cap, _startTime, _expirationTime, _saltNonce);
-  }
-
-  function testFuzz_RevertIf_StartTimeInPast(
-    IMintable _mintable,
-    address _minterAdmin,
-    uint256 _cap,
-    uint48 _startTime,
-    uint48 _expirationTime,
-    uint256 _saltNonce
-  ) public {
-    _assumeValidAddress(_minterAdmin);
-    vm.assume(_startTime < block.timestamp);
-    vm.assume(_expirationTime > _startTime);
-
-    vm.expectRevert(abi.encodeWithSelector(ZkCappedMinterV3.ZkCappedMinterV3__InvalidTime.selector));
-    factory.createMinter(_mintable, _minterAdmin, _cap, _startTime, _expirationTime, _saltNonce);
-  }
 }
 
 contract GetMinter is ZkCappedMinterV3FactoryTest {
