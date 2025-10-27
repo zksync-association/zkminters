@@ -157,9 +157,9 @@ contract ZkMinterTriggerV1Factory is IZkMinterV1Factory {
   ) internal returns (address _minterTriggerAddress) {
     bytes32 _salt = _calculateSalt(_saltNonce);
 
-    ZkMinterTriggerV1 instance =
+    ZkMinterTriggerV1 _instance =
       new ZkMinterTriggerV1{salt: _salt}(_mintable, _admin, _targets, _calldatas, _values, _recoveryAddress);
-    _minterTriggerAddress = address(instance);
+    _minterTriggerAddress = address(_instance);
 
     emit MinterTriggerCreated(_minterTriggerAddress, _mintable, _admin, _targets, _calldatas, _values, _recoveryAddress);
   }

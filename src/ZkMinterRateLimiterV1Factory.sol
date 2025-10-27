@@ -112,9 +112,9 @@ contract ZkMinterRateLimiterV1Factory is IZkMinterV1Factory {
     }
     bytes32 _salt = _calculateSalt(_saltNonce);
 
-    ZkMinterRateLimiterV1 instance =
+    ZkMinterRateLimiterV1 _instance =
       new ZkMinterRateLimiterV1{salt: _salt}(_mintable, _admin, _mintRateLimit, _mintRateLimitWindow);
-    _minterRateLimiterAddress = address(instance);
+    _minterRateLimiterAddress = address(_instance);
 
     emit MinterRateLimiterCreated(_minterRateLimiterAddress, _mintable, _admin, _mintRateLimit, _mintRateLimitWindow);
   }

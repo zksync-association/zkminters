@@ -141,9 +141,9 @@ contract ZkMinterERC1155EligibilityV1Factory is IZkMinterV1Factory {
   ) internal returns (address _minterERC1155Address) {
     bytes32 _salt = _calculateSalt(_saltNonce);
 
-    ZkMinterERC1155EligibilityV1 instance =
+    ZkMinterERC1155EligibilityV1 _instance =
       new ZkMinterERC1155EligibilityV1{salt: _salt}(_mintable, _admin, _erc1155, _tokenId, _balanceThreshold);
-    _minterERC1155Address = address(instance);
+    _minterERC1155Address = address(_instance);
 
     emit MinterERC1155EligibilityCreated(
       _minterERC1155Address, _mintable, _admin, _erc1155, _tokenId, _balanceThreshold

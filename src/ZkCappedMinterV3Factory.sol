@@ -139,8 +139,8 @@ contract ZkCappedMinterV3Factory is IZkMinterV1Factory {
   ) internal returns (address _cappedMinterAddress) {
     bytes32 _salt = _calculateSalt(_saltNonce);
 
-    ZkCappedMinterV3 instance = new ZkCappedMinterV3{salt: _salt}(_mintable, _admin, _cap, _startTime, _expirationTime);
-    _cappedMinterAddress = address(instance);
+    ZkCappedMinterV3 _instance = new ZkCappedMinterV3{salt: _salt}(_mintable, _admin, _cap, _startTime, _expirationTime);
+    _cappedMinterAddress = address(_instance);
 
     emit MinterCappedCreated(_cappedMinterAddress, _mintable, _admin, _cap, _startTime, _expirationTime);
   }
