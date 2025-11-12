@@ -31,6 +31,9 @@ contract ZkCappedMinterV3 is ZkMinterV1 {
   /// @notice Emitted when the metadata URI is set.
   event MetadataURISet(string uri);
 
+  /// @notice Error for when the admin is the zero address.
+  error ZkCappedMinterV3__InvalidAdmin();
+
   /// @notice Error for when the cap is exceeded.
   error ZkCappedMinterV3__CapExceeded(address minter, uint256 amount);
 
@@ -50,6 +53,9 @@ contract ZkCappedMinterV3 is ZkMinterV1 {
   /// @param _startTime The timestamp when minting can begin.
   /// @param _expirationTime The timestamp after which minting is no longer allowed (inclusive).
   constructor(IMintable _mintable, address _admin, uint256 _cap, uint48 _startTime, uint48 _expirationTime) {
+    if (_admin == address(0)) {
+      revert ZkCappedMinterV3__InvalidAdmin();
+    }
     if (_startTime > _expirationTime) {
       revert ZkCappedMinterV3__InvalidTime();
     }
