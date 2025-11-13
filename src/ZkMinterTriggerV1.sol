@@ -47,6 +47,9 @@ contract ZkMinterTriggerV1 is ZkMinterV1 {
   /// @notice Error for when the recovery address is the zero address.
   error ZkMinterTriggerV1__InvalidRecoveryAddress();
 
+  /// @notice Error for when the ETH transfer to the recovery address fails.
+  error ZkMinterTriggerV1__RecoveryEthTransferFailed();
+
   /// @notice Initializes the trigger contract with mintable, admin, and trigger parameters.
   /// @param _mintable A contract used as a target when calling mint.
   /// @param _admin The address that will have admin privileges.
@@ -134,7 +137,10 @@ contract ZkMinterTriggerV1 is ZkMinterV1 {
   function recoverTokens(address _token, uint256 _amount) external virtual {
     _checkRole(DEFAULT_ADMIN_ROLE, msg.sender);
     if (_token == address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE)) {
-      RECOVERY_ADDRESS.call{value: _amount}("");
+      (bool _success,) = RECOVERY_ADDRESS.call{value: _amount}("");
+      if (!_success) {
+        revert ZkMinterTriggerV1__RecoveryEthTransferFailed();
+      }
     } else {
       IERC20(_token).safeTransfer(RECOVERY_ADDRESS, _amount);
     }
