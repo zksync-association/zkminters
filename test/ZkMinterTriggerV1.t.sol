@@ -146,7 +146,7 @@ contract Constructor is ZkMinterTriggerV1Test {
     new ZkMinterTriggerV1(mintable, admin, _targets, _calldatas, _values, recoveryAddress);
   }
 
-  function test_RevertIf_TargetAddressIsZero(uint256 _mockValue, uint256 _valueAmount) public {
+  function testFuzz_RevertIf_TargetAddressIsZero(uint256 _mockValue, uint256 _valueAmount) public {
     address[] memory _targets = new address[](1);
     _targets[0] = address(0);
 
