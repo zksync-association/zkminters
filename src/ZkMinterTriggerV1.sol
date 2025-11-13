@@ -9,7 +9,9 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 /// @title ZkMinterTriggerV1
 /// @author [ScopeLift](https://scopelift.co)
 /// @notice A contract that enables minting tokens and triggering external function calls.
-/// @dev This contract should typically be placed at the beginning of the mint chain.
+/// @dev This contract should typically be placed at the beginning of the mint chain. Integrators must be aware that
+/// trigger execution is intentionally decoupled from minting, allowing repeated trigger invocations without additional
+/// mints. Design downstream targets accordingly to avoid unintended side effects from multiple executions.
 /// @custom:security-contact security@matterlabs.dev
 contract ZkMinterTriggerV1 is ZkMinterV1 {
   using SafeERC20 for IERC20;
@@ -102,7 +104,9 @@ contract ZkMinterTriggerV1 is ZkMinterV1 {
   }
 
   /// @notice Executes all configured trigger calls.
-  /// @dev Only callable by addresses with the MINTER_ROLE.
+  /// @dev Only callable by addresses with the MINTER_ROLE. Trigger calls are intentionally decoupled from minting and
+  /// can be executed multiple times without a preceding mint. Ensure configured targets tolerate repeated execution and
+  /// do not assume a single-call lifecycle.
   function trigger() public payable virtual {
     _revertIfClosed();
     _requireNotPaused();
@@ -121,7 +125,8 @@ contract ZkMinterTriggerV1 is ZkMinterV1 {
   /// @notice Mints tokens to this contract address and then executes all configured trigger calls.
   /// @param _to The address that will receive the minted tokens, must be address(this).
   /// @param _amount The quantity of tokens to mint.
-  /// @dev Only callable by addresses with the MINTER_ROLE.
+  /// @dev Only callable by addresses with the MINTER_ROLE. Combines `mint` and `trigger`, but does not restrict callers
+  /// from later invoking `trigger` independently.
   function mintAndTrigger(address _to, uint256 _amount) public payable virtual {
     mint(_to, _amount);
     trigger();
