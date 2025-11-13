@@ -507,9 +507,12 @@ contract MintAndTrigger is ZkMinterTriggerV1Test {
     _failTrigger.mintAndTrigger{value: _ethValue}(address(_failTrigger), _amount);
   }
 
-  function testFuzz_RevertIf_TargetHasNoCode(address _noCodeTarget, uint256 _amount, uint256 _ethValue, address _caller)
-    public
-  {
+  function testFuzz_RevertIf_TargetHasNoCode(
+    address _noCodeTarget,
+    uint256 _amount,
+    uint256 _ethValue,
+    address _caller
+  ) public {
     _amount = _boundToRealisticAmount(_amount);
     _ethValue = _boundTriggerValue(_ethValue);
     _assumeSafeAddress(_caller);
