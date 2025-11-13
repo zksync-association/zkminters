@@ -75,6 +75,12 @@ jobs:
       - name: Install Foundry
         uses: dutterbutter/foundry-zksync-toolchain@v1.0.1
 
+      - name: Check Foundry version
+        run: |
+          echo "=== Foundry version in CI ==="
+          forge --version
+          echo ""
+
       - name: Install dependencies
         run: forge install
 
@@ -91,5 +97,21 @@ jobs:
 
       - name: Check formatting
         run: |
+          echo "=== scopelint version ==="
           scopelint --version
-          scopelint check
+          echo ""
+          echo "=== Running scopelint check ==="
+          if ! scopelint check 2>&1; then
+            echo ""
+            echo "=== scopelint check failed ==="
+            echo "Running scopelint fmt to see what needs to be fixed..."
+            scopelint fmt 2>&1 || true
+            echo ""
+            echo "=== Showing formatting differences (git diff) ==="
+            git diff --stat
+            git diff | head -500
+            echo ""
+            echo "=== To fix: run 'scopelint fmt' locally with the same forge version as CI and commit the changes ==="
+            echo "=== CI forge version (see above) must match local forge version ==="
+            exit 1
+          fi
