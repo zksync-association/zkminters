@@ -90,7 +90,7 @@ contract UpdateMintable is ZkMinterV1Test {
     minterRateLimiter.close();
 
     vm.startPrank(admin);
-    vm.expectRevert(ZkMinterV1.ZkMinter__ContractClosed.selector);
+    vm.expectRevert(ZkMinterV1.ZkMinterV1__ContractClosed.selector);
     minterRateLimiter.updateMintable(_newMintable);
     vm.stopPrank();
   }

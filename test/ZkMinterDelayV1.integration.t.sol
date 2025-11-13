@@ -27,10 +27,10 @@ contract ZkMinterDelayV1Integration is ZkBaseTest {
     string memory _root = vm.projectRoot();
     string memory _path = string.concat(_root, "/zkout/ZkMinterDelayV1.sol/ZkMinterDelayV1.json");
     string memory _json = vm.readFile(_path);
-    bytes32 bytecodeHash = bytes32(stdJson.readBytes(_json, ".hash"));
+    bytes32 _bytecodeHash = bytes32(stdJson.readBytes(_json, ".hash"));
 
     // Deploy the factory with the bytecode hash
-    delayFactory = new ZkMinterDelayV1Factory(bytecodeHash);
+    delayFactory = new ZkMinterDelayV1Factory(_bytecodeHash);
 
     vm.label(address(delayFactory), "DelayFactory");
   }
@@ -66,43 +66,43 @@ contract ZkMinterDelayV1Integration is ZkBaseTest {
     // Deploy a new delay minter with fuzzed delay
     _setupDelayMinter(_delay, _saltNonce);
 
-    uint256 initialBalance = token.balanceOf(_recipient);
-    uint256 initialTotalSupply = token.totalSupply();
+    uint256 _initialBalance = token.balanceOf(_recipient);
+    uint256 _initialTotalSupply = token.totalSupply();
 
     // Step 1: Create a mint request
     vm.prank(minter);
     delayMinter.mint(_recipient, _amount);
 
-    uint256 requestId = 1; // First request
-    MintRequest memory request = delayMinter.getMintRequest(requestId);
+    uint256 _requestId = 1; // First request
+    MintRequest memory _request = delayMinter.getMintRequest(_requestId);
 
-    assertEq(request.minter, minter);
-    assertEq(request.to, _recipient);
-    assertEq(request.amount, _amount);
-    assertEq(request.executed, false);
-    assertEq(request.vetoed, false);
+    assertEq(_request.minter, minter);
+    assertEq(_request.to, _recipient);
+    assertEq(_request.amount, _amount);
+    assertEq(_request.executed, false);
+    assertEq(_request.vetoed, false);
 
     // Step 2: Try to execute before delay (should fail)
-    vm.expectRevert(abi.encodeWithSelector(ZkMinterDelayV1.ZkMinterDelayV1__MintRequestNotReady.selector, requestId));
-    delayMinter.executeMint(requestId);
+    vm.expectRevert(abi.encodeWithSelector(ZkMinterDelayV1.ZkMinterDelayV1__MintRequestNotReady.selector, _requestId));
+    delayMinter.executeMint(_requestId);
 
     // Verify no tokens were minted
-    assertEq(token.balanceOf(_recipient), initialBalance);
-    assertEq(token.totalSupply(), initialTotalSupply);
+    assertEq(token.balanceOf(_recipient), _initialBalance);
+    assertEq(token.totalSupply(), _initialTotalSupply);
 
     // Step 3: Fast forward past the delay period
     vm.warp(block.timestamp + _delay + 1);
 
     // Step 4: Execute the mint request
-    delayMinter.executeMint(requestId);
+    delayMinter.executeMint(_requestId);
 
     // Verify tokens were minted
-    assertEq(token.balanceOf(_recipient), initialBalance + _amount);
-    assertEq(token.totalSupply(), initialTotalSupply + _amount);
+    assertEq(token.balanceOf(_recipient), _initialBalance + _amount);
+    assertEq(token.totalSupply(), _initialTotalSupply + _amount);
 
     // Verify request is marked as executed
-    request = delayMinter.getMintRequest(requestId);
-    assertTrue(request.executed);
+    _request = delayMinter.getMintRequest(_requestId);
+    assertTrue(_request.executed);
   }
 
   function testFuzz_RevertIf_ExecutingVetoedMintRequest(
@@ -169,7 +169,7 @@ contract ZkMinterDelayV1Integration is ZkBaseTest {
     vm.prank(minter);
     delayMinter.mint(_recipient, _amount);
 
-    uint256 requestId = 1;
+    uint256 _requestId = 1;
 
     // Admin updates the delay to be longer
     vm.prank(admin);
@@ -177,14 +177,14 @@ contract ZkMinterDelayV1Integration is ZkBaseTest {
 
     // Try to execute after original delay (should fail)
     vm.warp(block.timestamp + _delay + 1);
-    vm.expectRevert(abi.encodeWithSelector(ZkMinterDelayV1.ZkMinterDelayV1__MintRequestNotReady.selector, requestId));
-    delayMinter.executeMint(requestId);
+    vm.expectRevert(abi.encodeWithSelector(ZkMinterDelayV1.ZkMinterDelayV1__MintRequestNotReady.selector, _requestId));
+    delayMinter.executeMint(_requestId);
 
     // Wait for new delay period
     vm.warp(block.timestamp + _newDelay - _delay);
 
     // Now it should work
-    delayMinter.executeMint(requestId);
+    delayMinter.executeMint(_requestId);
   }
 
   function testFuzz_ExecutesMultipleMintRequests(
@@ -261,7 +261,7 @@ contract ZkMinterDelayV1Integration is ZkBaseTest {
     vm.prank(minter);
     delayMinter.mint(_recipient, _amount);
 
-    uint256 requestId = 1;
+    uint256 _requestId = 1;
 
     // Pause the delay minter
     vm.prank(admin);
@@ -275,14 +275,14 @@ contract ZkMinterDelayV1Integration is ZkBaseTest {
     // Try to execute existing request (should fail)
     vm.warp(block.timestamp + _delay + 1);
     vm.expectRevert("Pausable: paused");
-    delayMinter.executeMint(requestId);
+    delayMinter.executeMint(_requestId);
 
     // Unpause
     vm.prank(admin);
     delayMinter.unpause();
 
     // Now execution should work
-    delayMinter.executeMint(requestId);
+    delayMinter.executeMint(_requestId);
   }
 
   function testFuzz_RevertIf_ExecutingMintAfterContractClosed(
@@ -308,7 +308,7 @@ contract ZkMinterDelayV1Integration is ZkBaseTest {
     vm.prank(minter);
     delayMinter.mint(_recipient, _amount);
 
-    uint256 requestId = 1;
+    uint256 _requestId = 1;
 
     // Close the contract
     vm.prank(admin);
@@ -316,12 +316,12 @@ contract ZkMinterDelayV1Integration is ZkBaseTest {
 
     // Try to create new request (should fail)
     vm.prank(minter);
-    vm.expectRevert(abi.encodeWithSelector(ZkMinterV1.ZkMinter__ContractClosed.selector));
+    vm.expectRevert(abi.encodeWithSelector(ZkMinterV1.ZkMinterV1__ContractClosed.selector));
     delayMinter.mint(_recipient, _amount);
 
     // Try to execute existing request (should fail)
     vm.warp(block.timestamp + _delay + 1);
-    vm.expectRevert(abi.encodeWithSelector(ZkMinterV1.ZkMinter__ContractClosed.selector));
-    delayMinter.executeMint(requestId);
+    vm.expectRevert(abi.encodeWithSelector(ZkMinterV1.ZkMinterV1__ContractClosed.selector));
+    delayMinter.executeMint(_requestId);
   }
 }

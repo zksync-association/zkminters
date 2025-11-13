@@ -37,7 +37,7 @@ abstract contract ZkMinterV1 is IMintable, AccessControl, Pausable {
   event MintableUpdated(IMintable indexed previousMintable, IMintable indexed newMintable);
 
   /// @notice Error for when the contract is closed.
-  error ZkMinter__ContractClosed();
+  error ZkMinterV1__ContractClosed();
 
   /// @notice Pauses token minting
   function pause() external virtual {
@@ -79,7 +79,7 @@ abstract contract ZkMinterV1 is IMintable, AccessControl, Pausable {
   /// @notice Reverts if the contract is closed.
   function _revertIfClosed() internal view virtual {
     if (closed) {
-      revert ZkMinter__ContractClosed();
+      revert ZkMinterV1__ContractClosed();
     }
   }
 }

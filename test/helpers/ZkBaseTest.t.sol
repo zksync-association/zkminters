@@ -54,13 +54,13 @@ contract ZkBaseTest is ZkTokenTest {
     _cappedMinter.grantRole(MINTER_ROLE, _minter);
   }
 
-  function _formatAccessControlError(address account, bytes32 role) internal pure returns (bytes memory) {
+  function _formatAccessControlError(address _account, bytes32 _role) internal pure returns (bytes memory) {
     return bytes(
       string.concat(
         "AccessControl: account ",
-        Strings.toHexString(uint160(account), 20),
+        Strings.toHexString(uint160(_account), 20),
         " is missing role ",
-        Strings.toHexString(uint256(role), 32)
+        Strings.toHexString(uint256(_role), 32)
       )
     );
   }

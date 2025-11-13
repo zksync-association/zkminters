@@ -16,10 +16,10 @@ contract ZkCappedMinterV3FactoryTest is Test {
   ZkCappedMinterV3Factory factory;
 
   function setUp() public virtual {
-    string memory root = vm.projectRoot();
-    string memory path = string.concat(root, "/zkout/ZkCappedMinterV3.sol/ZkCappedMinterV3.json");
-    string memory json = vm.readFile(path);
-    bytecodeHash = bytes32(stdJson.readBytes(json, ".hash"));
+    string memory _root = vm.projectRoot();
+    string memory _path = string.concat(_root, "/zkout/ZkCappedMinterV3.sol/ZkCappedMinterV3.json");
+    string memory _json = vm.readFile(_path);
+    bytecodeHash = bytes32(stdJson.readBytes(_json, ".hash"));
 
     factory = new ZkCappedMinterV3Factory(bytecodeHash);
   }

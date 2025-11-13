@@ -115,9 +115,9 @@ contract Mint is ZkMinterRateLimiterV1Test {
     vm.startPrank(minter);
     // Mint up to 5 times while staying within the IMintable contract's expiration time and mint cap.
     for (
-      uint256 i = 0;
-      i < 5 && block.timestamp < cappedMinter.EXPIRATION_TIME() && cappedMinter.minted() + _amount < cappedMinter.CAP();
-      i++
+      uint256 _i = 0;
+      _i < 5 && block.timestamp < cappedMinter.EXPIRATION_TIME() && cappedMinter.minted() + _amount < cappedMinter.CAP();
+      _i++
     ) {
       minterRateLimiter.mint(_to, _amount);
       assertEq(minterRateLimiter.currentMintWindowMinted(), _amount);
@@ -233,7 +233,7 @@ contract Mint is ZkMinterRateLimiterV1Test {
     minterRateLimiter.close();
 
     vm.prank(_caller);
-    vm.expectRevert(ZkMinterV1.ZkMinter__ContractClosed.selector);
+    vm.expectRevert(ZkMinterV1.ZkMinterV1__ContractClosed.selector);
     minterRateLimiter.mint(_to, _amount);
   }
 }

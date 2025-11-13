@@ -129,13 +129,12 @@ contract ZkMinterDelayV1 is ZkMinterV1 {
     }
 
     uint48 _createdAt = uint48(block.timestamp);
-    uint256 currentRequestId = nextMintRequestId++;
+    uint256 _currentRequestId = nextMintRequestId++;
 
-    mintRequests[currentRequestId] = MintRequest({
-      minter: msg.sender, to: _to, amount: _amount, createdAt: _createdAt, executed: false, vetoed: false
-    });
+    mintRequests[_currentRequestId] =
+      MintRequest({minter: msg.sender, to: _to, amount: _amount, createdAt: _createdAt, executed: false, vetoed: false});
 
-    emit MintRequested(currentRequestId, _to, _amount, _createdAt + mintDelay);
+    emit MintRequested(_currentRequestId, _to, _amount, _createdAt + mintDelay);
   }
 
   /// @notice Executes a mint request minting the amount of tokens specified in the request for the specified to

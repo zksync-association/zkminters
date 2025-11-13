@@ -141,7 +141,7 @@ contract Mint is ZkMinterDelayV1Test {
     minterDelay.close();
 
     vm.prank(_caller);
-    vm.expectRevert(ZkMinterV1.ZkMinter__ContractClosed.selector);
+    vm.expectRevert(ZkMinterV1.ZkMinterV1__ContractClosed.selector);
     minterDelay.mint(_to, _amount);
   }
 }
@@ -210,7 +210,7 @@ contract ExecuteMint is ZkMinterDelayV1Test {
     vm.prank(admin);
     minterDelay.close();
 
-    vm.expectRevert(ZkMinterV1.ZkMinter__ContractClosed.selector);
+    vm.expectRevert(ZkMinterV1.ZkMinterV1__ContractClosed.selector);
     minterDelay.executeMint(_mintRequestId);
   }
 
@@ -314,7 +314,7 @@ contract UpdateMintDelay is ZkMinterDelayV1Test {
     minterDelay.close();
 
     // Try to update mint delay after contract is closed
-    vm.expectRevert(ZkMinterV1.ZkMinter__ContractClosed.selector);
+    vm.expectRevert(ZkMinterV1.ZkMinterV1__ContractClosed.selector);
     vm.prank(admin);
     minterDelay.updateMintDelay(_newMintDelay);
   }

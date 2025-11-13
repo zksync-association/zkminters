@@ -130,12 +130,12 @@ contract Mint is ZkMinterERC1155EligibilityV1Test {
     _assumeSafeAddress(_to);
     _amount = _boundToRealisticAmount(_amount);
 
-    uint256 balanceBefore = token.balanceOf(_to);
+    uint256 _balanceBefore = token.balanceOf(_to);
 
     vm.prank(minter);
     minterERC1155.mint(_to, _amount);
 
-    assertEq(token.balanceOf(_to), balanceBefore + _amount);
+    assertEq(token.balanceOf(_to), _balanceBefore + _amount);
   }
 
   function testFuzz_EmitsMintedEvent(address _to, uint256 _amount) public {
@@ -181,7 +181,7 @@ contract Mint is ZkMinterERC1155EligibilityV1Test {
     vm.prank(admin);
     minterERC1155.close();
 
-    vm.expectRevert(ZkMinterV1.ZkMinter__ContractClosed.selector);
+    vm.expectRevert(ZkMinterV1.ZkMinterV1__ContractClosed.selector);
     vm.prank(minter);
     minterERC1155.mint(_to, _amount);
   }
