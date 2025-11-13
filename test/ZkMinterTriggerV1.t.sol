@@ -72,6 +72,7 @@ contract Constructor is ZkMinterTriggerV1Test {
     uint256 _value2
   ) public {
     vm.assume(_admin != address(0) && _recovery != address(0));
+    vm.assume(_target2 != address(0));
 
     MockTargetContract _mockTarget = new MockTargetContract();
     address[] memory _targets = new address[](2);
@@ -142,6 +143,20 @@ contract Constructor is ZkMinterTriggerV1Test {
     _values[1] = _valueAmount;
 
     vm.expectRevert(ZkMinterTriggerV1.ZkMinterTriggerV1__ArrayLengthMismatch.selector);
+    new ZkMinterTriggerV1(mintable, admin, _targets, _calldatas, _values, recoveryAddress);
+  }
+
+  function testFuzz_RevertIf_TargetAddressIsZero(uint256 _mockValue, uint256 _valueAmount) public {
+    address[] memory _targets = new address[](1);
+    _targets[0] = address(0);
+
+    bytes[] memory _calldatas = new bytes[](1);
+    _calldatas[0] = abi.encodeWithSelector(mockTarget.setValue.selector, _mockValue);
+
+    uint256[] memory _values = new uint256[](1);
+    _values[0] = _valueAmount;
+
+    vm.expectRevert(abi.encodeWithSelector(ZkMinterTriggerV1.ZkMinterTriggerV1__InvalidTargetAddress.selector, 0));
     new ZkMinterTriggerV1(mintable, admin, _targets, _calldatas, _values, recoveryAddress);
   }
 

@@ -47,6 +47,9 @@ contract ZkMinterTriggerV1 is ZkMinterV1 {
   /// @notice Error for when the recovery address is the zero address.
   error ZkMinterTriggerV1__InvalidRecoveryAddress();
 
+  /// @notice Error for when a target address is the zero address.
+  error ZkMinterTriggerV1__InvalidTargetAddress(uint256 index);
+
   /// @notice Initializes the trigger contract with mintable, admin, and trigger parameters.
   /// @param _mintable A contract used as a target when calling mint.
   /// @param _admin The address that will have admin privileges.
@@ -68,6 +71,12 @@ contract ZkMinterTriggerV1 is ZkMinterV1 {
 
     if (_targetAddresses.length != _calldatas.length || _calldatas.length != _values.length) {
       revert ZkMinterTriggerV1__ArrayLengthMismatch();
+    }
+
+    for (uint256 i = 0; i < _targetAddresses.length; i++) {
+      if (_targetAddresses[i] == address(0)) {
+        revert ZkMinterTriggerV1__InvalidTargetAddress(i);
+      }
     }
 
     if (_recoveryAddress == address(0)) {
