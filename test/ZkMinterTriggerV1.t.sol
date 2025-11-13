@@ -371,16 +371,16 @@ contract Trigger is ZkMinterTriggerV1Test {
     _calldatas[0] = bytes("");
     uint256[] memory _values = new uint256[](1);
 
-    ZkMinterTriggerV1 noCodeTrigger =
+    ZkMinterTriggerV1 _noCodeTrigger =
       new ZkMinterTriggerV1(mintable, admin, _targets, _calldatas, _values, recoveryAddress);
     vm.prank(admin);
-    noCodeTrigger.grantRole(MINTER_ROLE, _caller);
+    _noCodeTrigger.grantRole(MINTER_ROLE, _caller);
 
     vm.expectRevert(
       abi.encodeWithSelector(ZkMinterTriggerV1.ZkMinterTriggerV1__NoCodeAtTarget.selector, 0, _noCodeTarget)
     );
     vm.prank(_caller);
-    noCodeTrigger.trigger();
+    _noCodeTrigger.trigger();
   }
 }
 
@@ -522,18 +522,18 @@ contract MintAndTrigger is ZkMinterTriggerV1Test {
     uint256[] memory _values = new uint256[](1);
     _values[0] = _ethValue;
 
-    ZkMinterTriggerV1 noCodeTrigger =
+    ZkMinterTriggerV1 _noCodeTrigger =
       new ZkMinterTriggerV1(mintable, admin, _targets, _calldatas, _values, recoveryAddress);
-    _grantMinterRole(cappedMinter, cappedMinterAdmin, address(noCodeTrigger));
+    _grantMinterRole(cappedMinter, cappedMinterAdmin, address(_noCodeTrigger));
     vm.prank(admin);
-    noCodeTrigger.grantRole(MINTER_ROLE, _caller);
+    _noCodeTrigger.grantRole(MINTER_ROLE, _caller);
     vm.deal(_caller, _ethValue);
 
     vm.expectRevert(
       abi.encodeWithSelector(ZkMinterTriggerV1.ZkMinterTriggerV1__NoCodeAtTarget.selector, 0, _noCodeTarget)
     );
     vm.prank(_caller);
-    noCodeTrigger.mintAndTrigger{value: _ethValue}(address(noCodeTrigger), _amount);
+    _noCodeTrigger.mintAndTrigger{value: _ethValue}(address(_noCodeTrigger), _amount);
   }
 
   function testFuzz_TokensTransferredAndCallExecuted(
