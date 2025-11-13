@@ -35,6 +35,9 @@ contract ZkMinterTriggerV1 is ZkMinterV1 {
   /// @notice Error for when a function call fails.
   error ZkMinterTriggerV1__TriggerCallFailed(uint256 index, address target);
 
+  /// @notice Error for when a target has no code.
+  error ZkMinterTriggerV1__NoCodeAtTarget(uint256 index, address target);
+
   /// @notice Error for when the recipient is not the expected recipient.
   error ZkMinterTriggerV1__InvalidRecipient(address recipient, address expectedRecipient);
 
@@ -109,9 +112,13 @@ contract ZkMinterTriggerV1 is ZkMinterV1 {
     _checkRole(MINTER_ROLE, msg.sender);
 
     for (uint256 i = 0; i < targets.length; i++) {
-      (bool success,) = targets[i].call{value: values[i]}(calldatas[i]);
+      address _target = targets[i];
+      if (_target.code.length == 0) {
+        revert ZkMinterTriggerV1__NoCodeAtTarget(i, _target);
+      }
+      (bool success,) = _target.call{value: values[i]}(calldatas[i]);
       if (!success) {
-        revert ZkMinterTriggerV1__TriggerCallFailed(i, targets[i]);
+        revert ZkMinterTriggerV1__TriggerCallFailed(i, _target);
       }
     }
 

@@ -360,6 +360,28 @@ contract Trigger is ZkMinterTriggerV1Test {
     vm.prank(caller);
     failTrigger.trigger();
   }
+
+  function testFuzz_RevertIf_TargetHasNoCode(address _noCodeTarget, address _caller) public {
+    _assumeSafeAddress(_caller);
+    vm.assume(_noCodeTarget.code.length == 0);
+
+    address[] memory _targets = new address[](1);
+    _targets[0] = _noCodeTarget;
+    bytes[] memory _calldatas = new bytes[](1);
+    _calldatas[0] = bytes("");
+    uint256[] memory _values = new uint256[](1);
+
+    ZkMinterTriggerV1 noCodeTrigger =
+      new ZkMinterTriggerV1(mintable, admin, _targets, _calldatas, _values, recoveryAddress);
+    vm.prank(admin);
+    noCodeTrigger.grantRole(MINTER_ROLE, _caller);
+
+    vm.expectRevert(
+      abi.encodeWithSelector(ZkMinterTriggerV1.ZkMinterTriggerV1__NoCodeAtTarget.selector, 0, _noCodeTarget)
+    );
+    vm.prank(_caller);
+    noCodeTrigger.trigger();
+  }
 }
 
 contract MintAndTrigger is ZkMinterTriggerV1Test {
@@ -483,6 +505,35 @@ contract MintAndTrigger is ZkMinterTriggerV1Test {
     );
     vm.prank(_caller);
     failTrigger.mintAndTrigger{value: _ethValue}(address(failTrigger), _amount);
+  }
+
+  function testFuzz_RevertIf_TargetHasNoCode(address _noCodeTarget, uint256 _amount, uint256 _ethValue, address _caller)
+    public
+  {
+    _amount = _boundToRealisticAmount(_amount);
+    _ethValue = _boundTriggerValue(_ethValue);
+    _assumeSafeAddress(_caller);
+    vm.assume(_noCodeTarget.code.length == 0);
+
+    address[] memory _targets = new address[](1);
+    _targets[0] = _noCodeTarget;
+    bytes[] memory _calldatas = new bytes[](1);
+    _calldatas[0] = bytes("");
+    uint256[] memory _values = new uint256[](1);
+    _values[0] = _ethValue;
+
+    ZkMinterTriggerV1 noCodeTrigger =
+      new ZkMinterTriggerV1(mintable, admin, _targets, _calldatas, _values, recoveryAddress);
+    _grantMinterRole(cappedMinter, cappedMinterAdmin, address(noCodeTrigger));
+    vm.prank(admin);
+    noCodeTrigger.grantRole(MINTER_ROLE, _caller);
+    vm.deal(_caller, _ethValue);
+
+    vm.expectRevert(
+      abi.encodeWithSelector(ZkMinterTriggerV1.ZkMinterTriggerV1__NoCodeAtTarget.selector, 0, _noCodeTarget)
+    );
+    vm.prank(_caller);
+    noCodeTrigger.mintAndTrigger{value: _ethValue}(address(noCodeTrigger), _amount);
   }
 
   function testFuzz_TokensTransferredAndCallExecuted(
