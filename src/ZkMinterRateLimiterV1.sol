@@ -72,8 +72,8 @@ contract ZkMinterRateLimiterV1 is ZkMinterV1 {
 
     // Roll forward to new window if needed
     if (block.timestamp >= currentMintWindowStart + mintRateLimitWindow) {
-      uint48 windowsPassed = uint48(block.timestamp - currentMintWindowStart) / mintRateLimitWindow;
-      currentMintWindowStart += windowsPassed * mintRateLimitWindow;
+      uint48 _windowsPassed = uint48(block.timestamp - currentMintWindowStart) / mintRateLimitWindow;
+      currentMintWindowStart += _windowsPassed * mintRateLimitWindow;
       currentMintWindowMinted = 0;
     }
     _revertIfRateLimitPerMintWindowExceeded(_amount);

@@ -42,14 +42,14 @@ contract CreateMinterRateLimiter is ZkMinterRateLimiterV1FactoryTest {
     _assumeValidAddress(_minterAdmin);
     _assumeValidMintRateLimitWindow(_mintRateLimitWindow);
 
-    address minterAddress =
+    address _minterAddress =
       factory.createMinter(_mintable, _minterAdmin, _mintRateLimit, _mintRateLimitWindow, _saltNonce);
 
-    ZkMinterRateLimiterV1 minter = ZkMinterRateLimiterV1(minterAddress);
-    assertEq(address(minter.mintable()), address(_mintable));
-    assertEq(minter.hasRole(minter.DEFAULT_ADMIN_ROLE(), _minterAdmin), true);
-    assertEq(minter.mintRateLimit(), _mintRateLimit);
-    assertEq(minter.mintRateLimitWindow(), _mintRateLimitWindow);
+    ZkMinterRateLimiterV1 _minter = ZkMinterRateLimiterV1(_minterAddress);
+    assertEq(address(_minter.mintable()), address(_mintable));
+    assertEq(_minter.hasRole(_minter.DEFAULT_ADMIN_ROLE(), _minterAdmin), true);
+    assertEq(_minter.mintRateLimit(), _mintRateLimit);
+    assertEq(_minter.mintRateLimitWindow(), _mintRateLimitWindow);
   }
 
   function testFuzz_EmitsMinterRateLimiterCreatedEvent(
@@ -84,14 +84,14 @@ contract CreateMinterRateLimiter is ZkMinterRateLimiterV1FactoryTest {
     _assumeValidAddress(_minterAdmin);
     _assumeValidMintRateLimitWindow(_mintRateLimitWindow);
 
-    address minterAddress =
+    address _minterAddress =
       factory.createMinter(_mintable, abi.encode(_minterAdmin, _mintRateLimit, _mintRateLimitWindow, _saltNonce));
 
-    ZkMinterRateLimiterV1 minter = ZkMinterRateLimiterV1(minterAddress);
-    assertEq(address(minter.mintable()), address(_mintable));
-    assertEq(minter.hasRole(minter.DEFAULT_ADMIN_ROLE(), _minterAdmin), true);
-    assertEq(minter.mintRateLimit(), _mintRateLimit);
-    assertEq(minter.mintRateLimitWindow(), _mintRateLimitWindow);
+    ZkMinterRateLimiterV1 _minter = ZkMinterRateLimiterV1(_minterAddress);
+    assertEq(address(_minter.mintable()), address(_mintable));
+    assertEq(_minter.hasRole(_minter.DEFAULT_ADMIN_ROLE(), _minterAdmin), true);
+    assertEq(_minter.mintRateLimit(), _mintRateLimit);
+    assertEq(_minter.mintRateLimitWindow(), _mintRateLimitWindow);
   }
 
   function testFuzz_EmitsMinterRateLimiterCreatedEventWithBytesArgs(
@@ -169,13 +169,13 @@ contract GetMinter is ZkMinterRateLimiterV1FactoryTest {
     _assumeValidAddress(_minterAdmin);
     _assumeValidMintRateLimitWindow(_mintRateLimitWindow);
 
-    address expectedMinterAddress =
+    address _expectedMinterAddress =
       factory.getMinter(_mintable, _minterAdmin, _mintRateLimit, _mintRateLimitWindow, _saltNonce);
 
-    address minterAddress =
+    address _minterAddress =
       factory.createMinter(_mintable, _minterAdmin, _mintRateLimit, _mintRateLimitWindow, _saltNonce);
 
-    assertEq(minterAddress, expectedMinterAddress);
+    assertEq(_minterAddress, _expectedMinterAddress);
   }
 
   function testFuzz_GetMinterWithoutDeployment(
@@ -188,22 +188,22 @@ contract GetMinter is ZkMinterRateLimiterV1FactoryTest {
     _assumeValidAddress(_minterAdmin);
     _assumeValidMintRateLimitWindow(_mintRateLimitWindow);
 
-    address expectedMinterAddress =
+    address _expectedMinterAddress =
       factory.getMinter(_mintable, _minterAdmin, _mintRateLimit, _mintRateLimitWindow, _saltNonce);
 
-    uint256 codeSize;
+    uint256 _codeSize;
     assembly {
-      codeSize := extcodesize(expectedMinterAddress)
+      _codeSize := extcodesize(_expectedMinterAddress)
     }
-    assertEq(codeSize, 0);
+    assertEq(_codeSize, 0);
 
-    address minterAddress =
+    address _minterAddress =
       factory.createMinter(_mintable, _minterAdmin, _mintRateLimit, _mintRateLimitWindow, _saltNonce);
 
     assembly {
-      codeSize := extcodesize(expectedMinterAddress)
+      _codeSize := extcodesize(_expectedMinterAddress)
     }
-    assertGt(codeSize, 0);
-    assertEq(minterAddress, expectedMinterAddress);
+    assertGt(_codeSize, 0);
+    assertEq(_minterAddress, _expectedMinterAddress);
   }
 }

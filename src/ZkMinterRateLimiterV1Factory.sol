@@ -80,9 +80,12 @@ contract ZkMinterRateLimiterV1Factory is IZkMinterV1Factory {
     uint48 _mintRateLimitWindow,
     uint256 _saltNonce
   ) external view returns (address _minterRateLimiterAddress) {
-    bytes32 salt = _calculateSalt(_saltNonce);
+    bytes32 _salt = _calculateSalt(_saltNonce);
     _minterRateLimiterAddress = L2ContractHelper.computeCreate2Address(
-      address(this), salt, BYTECODE_HASH, keccak256(abi.encode(_mintable, _admin, _mintRateLimit, _mintRateLimitWindow))
+      address(this),
+      _salt,
+      BYTECODE_HASH,
+      keccak256(abi.encode(_mintable, _admin, _mintRateLimit, _mintRateLimitWindow))
     );
   }
 

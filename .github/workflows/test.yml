@@ -91,5 +91,6 @@ jobs:
 
       - name: Check formatting
         run: |
+          echo "=== scopelint version ==="
           scopelint --version
           scopelint check
