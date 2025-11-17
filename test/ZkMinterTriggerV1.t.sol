@@ -363,7 +363,7 @@ contract Trigger is ZkMinterTriggerV1Test {
 
   function testFuzz_RevertIf_TargetHasNoCode(address _noCodeTarget, address _caller) public {
     _assumeSafeAddress(_caller);
-    vm.assume(_noCodeTarget.code.length == 0);
+    vm.assume(_noCodeTarget.code.length == 0 && _noCodeTarget != address(0x000000000000000000000000000000000000800A));
 
     address[] memory _targets = new address[](1);
     _targets[0] = _noCodeTarget;
@@ -507,9 +507,12 @@ contract MintAndTrigger is ZkMinterTriggerV1Test {
     failTrigger.mintAndTrigger{value: _ethValue}(address(failTrigger), _amount);
   }
 
-  function testFuzz_RevertIf_TargetHasNoCode(address _noCodeTarget, uint256 _amount, uint256 _ethValue, address _caller)
-    public
-  {
+  function testFuzz_RevertIf_TargetHasNoCode(
+    address _noCodeTarget,
+    uint256 _amount,
+    uint256 _ethValue,
+    address _caller
+  ) public {
     _amount = _boundToRealisticAmount(_amount);
     _ethValue = _boundTriggerValue(_ethValue);
     _assumeSafeAddress(_caller);
