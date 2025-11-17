@@ -25,10 +25,10 @@ contract ZkMinterERC1155EligibilityV1Integration is ZkBaseTest {
     fakeERC1155 = new FakeERC1155();
 
     // Compute bytecode hash directly from the contract
-    bytes32 bytecodeHash = keccak256(type(ZkMinterERC1155EligibilityV1).creationCode);
+    bytes32 _bytecodeHash = keccak256(type(ZkMinterERC1155EligibilityV1).creationCode);
 
     // Deploy the factory with the bytecode hash
-    eligibilityFactory = new ZkMinterERC1155EligibilityV1Factory(bytecodeHash);
+    eligibilityFactory = new ZkMinterERC1155EligibilityV1Factory(_bytecodeHash);
 
     vm.label(address(eligibilityFactory), "EligibilityFactory");
     vm.label(address(fakeERC1155), "FakeERC1155");
@@ -92,16 +92,16 @@ contract ZkMinterERC1155EligibilityV1Integration is ZkBaseTest {
     // Test with balance above threshold
     fakeERC1155.setBalance(_recipient, _tokenId, _balance);
 
-    uint256 initialBalance = token.balanceOf(_recipient);
-    uint256 initialTotalSupply = token.totalSupply();
+    uint256 _initialBalance = token.balanceOf(_recipient);
+    uint256 _initialTotalSupply = token.totalSupply();
 
     // Recipient should be able to mint
     vm.prank(_recipient);
     _eligibilityMinter.mint(_recipient, _amount);
 
     // Verify minting occurred
-    assertEq(token.balanceOf(_recipient), initialBalance + _amount);
-    assertEq(token.totalSupply(), initialTotalSupply + _amount);
+    assertEq(token.balanceOf(_recipient), _initialBalance + _amount);
+    assertEq(token.totalSupply(), _initialTotalSupply + _amount);
     assertEq(_eligibilityMinter.isEligible(_recipient), true);
   }
 
@@ -126,20 +126,20 @@ contract ZkMinterERC1155EligibilityV1Integration is ZkBaseTest {
     // Give recipient sufficient balance
     fakeERC1155.setBalance(_recipient, _tokenId, _balanceThreshold + 10);
 
-    uint256 initialBalance = token.balanceOf(_recipient);
-    uint256 initialTotalSupply = token.totalSupply();
+    uint256 _initialBalance = token.balanceOf(_recipient);
+    uint256 _initialTotalSupply = token.totalSupply();
 
     // First mint
     vm.prank(_recipient);
     _eligibilityMinter.mint(_recipient, _amount1);
-    assertEq(token.balanceOf(_recipient), initialBalance + _amount1);
-    assertEq(token.totalSupply(), initialTotalSupply + _amount1);
+    assertEq(token.balanceOf(_recipient), _initialBalance + _amount1);
+    assertEq(token.totalSupply(), _initialTotalSupply + _amount1);
 
     // Second mint
     vm.prank(_recipient);
     _eligibilityMinter.mint(_recipient, _amount2);
-    assertEq(token.balanceOf(_recipient), initialBalance + _amount1 + _amount2);
-    assertEq(token.totalSupply(), initialTotalSupply + _amount1 + _amount2);
+    assertEq(token.balanceOf(_recipient), _initialBalance + _amount1 + _amount2);
+    assertEq(token.totalSupply(), _initialTotalSupply + _amount1 + _amount2);
   }
 
   function testFuzz_MultipleMintsByDifferentUsers(
@@ -167,23 +167,23 @@ contract ZkMinterERC1155EligibilityV1Integration is ZkBaseTest {
     fakeERC1155.setBalance(_recipient1, _tokenId, _balanceThreshold + 1);
     fakeERC1155.setBalance(_recipient2, _tokenId, _balanceThreshold + 1);
 
-    uint256 initialBalance1 = token.balanceOf(_recipient1);
-    uint256 initialBalance2 = token.balanceOf(_recipient2);
-    uint256 initialTotalSupply = token.totalSupply();
+    uint256 _initialBalance1 = token.balanceOf(_recipient1);
+    uint256 _initialBalance2 = token.balanceOf(_recipient2);
+    uint256 _initialTotalSupply = token.totalSupply();
 
     // Recipient1 mints
     vm.prank(_recipient1);
     _eligibilityMinter.mint(_recipient1, _amount1);
-    assertEq(token.balanceOf(_recipient1), initialBalance1 + _amount1);
-    assertEq(token.balanceOf(_recipient2), initialBalance2);
-    assertEq(token.totalSupply(), initialTotalSupply + _amount1);
+    assertEq(token.balanceOf(_recipient1), _initialBalance1 + _amount1);
+    assertEq(token.balanceOf(_recipient2), _initialBalance2);
+    assertEq(token.totalSupply(), _initialTotalSupply + _amount1);
 
     // Recipient2 mints
     vm.prank(_recipient2);
     _eligibilityMinter.mint(_recipient2, _amount2);
-    assertEq(token.balanceOf(_recipient1), initialBalance1 + _amount1);
-    assertEq(token.balanceOf(_recipient2), initialBalance2 + _amount2);
-    assertEq(token.totalSupply(), initialTotalSupply + _amount1 + _amount2);
+    assertEq(token.balanceOf(_recipient1), _initialBalance1 + _amount1);
+    assertEq(token.balanceOf(_recipient2), _initialBalance2 + _amount2);
+    assertEq(token.totalSupply(), _initialTotalSupply + _amount1 + _amount2);
   }
 
   function testFuzz_MintAfterMinterIsPaused(
@@ -218,14 +218,14 @@ contract ZkMinterERC1155EligibilityV1Integration is ZkBaseTest {
     _eligibilityMinter.unpause();
 
     // Now minting should work
-    uint256 initialBalance = token.balanceOf(_recipient);
-    uint256 initialTotalSupply = token.totalSupply();
+    uint256 _initialBalance = token.balanceOf(_recipient);
+    uint256 _initialTotalSupply = token.totalSupply();
 
     vm.prank(_recipient);
     _eligibilityMinter.mint(_recipient, _amount);
 
-    assertEq(token.balanceOf(_recipient), initialBalance + _amount);
-    assertEq(token.totalSupply(), initialTotalSupply + _amount);
+    assertEq(token.balanceOf(_recipient), _initialBalance + _amount);
+    assertEq(token.totalSupply(), _initialTotalSupply + _amount);
   }
 
   function testFuzz_RevertIf_BelowTheBalanceThreshold(
@@ -279,7 +279,7 @@ contract ZkMinterERC1155EligibilityV1Integration is ZkBaseTest {
 
     // Try to mint after contract is closed (should fail)
     vm.prank(_recipient);
-    vm.expectRevert(abi.encodeWithSelector(ZkMinterV1.ZkMinter__ContractClosed.selector));
+    vm.expectRevert(abi.encodeWithSelector(ZkMinterV1.ZkMinterV1__ContractClosed.selector));
     _eligibilityMinter.mint(_recipient, _amount);
   }
 }
@@ -325,10 +325,10 @@ contract ZkMinterERC1155EligibilityV1HatsIntegration is ZkBaseTest {
     _hats.mintHat(_exampleHatId, minter);
 
     // Compute bytecode hash directly from the contract
-    bytes32 bytecodeHash = keccak256(type(ZkMinterERC1155EligibilityV1).creationCode);
+    bytes32 _bytecodeHash = keccak256(type(ZkMinterERC1155EligibilityV1).creationCode);
 
     // Deploy the factory with the bytecode hash
-    eligibilityFactory = new ZkMinterERC1155EligibilityV1Factory(bytecodeHash);
+    eligibilityFactory = new ZkMinterERC1155EligibilityV1Factory(_bytecodeHash);
 
     vm.label(address(eligibilityFactory), "EligibilityFactory");
     eligibilityMinter = ZkMinterERC1155EligibilityV1(
