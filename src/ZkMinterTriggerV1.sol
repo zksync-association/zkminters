@@ -89,7 +89,7 @@ contract ZkMinterTriggerV1 is ZkMinterV1 {
   /// @notice Mints tokens to this contract address.
   /// @param _to The address that will receive the new tokens, must be address(this).
   /// @param _amount The quantity of tokens that will be minted.
-  /// @dev Only callable by addresses with the MINTER_ROLE. Tokens are always minted to address(this).
+  /// @dev Only callable by addresses with the `MINTER_ROLE`. Tokens are always minted to address(this).
   function mint(address _to, uint256 _amount) public virtual {
     _revertIfClosed();
     _requireNotPaused();
@@ -104,7 +104,7 @@ contract ZkMinterTriggerV1 is ZkMinterV1 {
   }
 
   /// @notice Executes all configured trigger calls.
-  /// @dev Only callable by addresses with the MINTER_ROLE. Trigger calls are intentionally decoupled from minting and
+  /// @dev Only callable by addresses with the `MINTER_ROLE`. Trigger calls are intentionally decoupled from minting and
   /// can be executed multiple times without a preceding mint. Ensure configured targets tolerate repeated execution and
   /// do not assume a single-call lifecycle.
   function trigger() public payable virtual {
@@ -125,8 +125,8 @@ contract ZkMinterTriggerV1 is ZkMinterV1 {
   /// @notice Mints tokens to this contract address and then executes all configured trigger calls.
   /// @param _to The address that will receive the minted tokens, must be address(this).
   /// @param _amount The quantity of tokens to mint.
-  /// @dev Only callable by addresses with the MINTER_ROLE. Combines `mint` and `trigger`, but does not restrict callers
-  /// from later invoking `trigger` independently.
+  /// @dev Only callable by addresses with the `MINTER_ROLE`. Combines `mint` and `trigger`, but does not restrict
+  /// callers from later invoking `trigger` independently.
   function mintAndTrigger(address _to, uint256 _amount) public payable virtual {
     mint(_to, _amount);
     trigger();
