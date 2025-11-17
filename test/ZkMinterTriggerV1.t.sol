@@ -58,6 +58,15 @@ contract ZkMinterTriggerV1Test is ZkBaseTest {
     assertEq(minterTrigger.calldatas(0), abi.encodeWithSelector(mockTarget.setValue.selector, 42));
     assertEq(minterTrigger.RECOVERY_ADDRESS(), recoveryAddress);
   }
+
+  function _assumeNoCodeTarget(address _noCodeTarget) internal view {
+    vm.assume(
+      _noCodeTarget.code.length == 0 && _noCodeTarget != address(0x000000000000000000000000000000000000800A)
+        && _noCodeTarget != address(0x000000000000000000000000000000000000800f)
+        && _noCodeTarget != address(0x0000000000000000000000000000000000008015)
+        && _noCodeTarget != address(0x000000000000000000000000000000000000800E)
+    );
+  }
 }
 
 contract Constructor is ZkMinterTriggerV1Test {
@@ -363,7 +372,7 @@ contract Trigger is ZkMinterTriggerV1Test {
 
   function testFuzz_RevertIf_TargetHasNoCode(address _noCodeTarget, address _caller) public {
     _assumeSafeAddress(_caller);
-    vm.assume(_noCodeTarget.code.length == 0 && _noCodeTarget != address(0x000000000000000000000000000000000000800A));
+    _assumeNoCodeTarget(_noCodeTarget);
 
     address[] memory _targets = new address[](1);
     _targets[0] = _noCodeTarget;
@@ -516,7 +525,7 @@ contract MintAndTrigger is ZkMinterTriggerV1Test {
     _amount = _boundToRealisticAmount(_amount);
     _ethValue = _boundTriggerValue(_ethValue);
     _assumeSafeAddress(_caller);
-    vm.assume(_noCodeTarget.code.length == 0);
+    _assumeNoCodeTarget(_noCodeTarget);
 
     address[] memory _targets = new address[](1);
     _targets[0] = _noCodeTarget;
