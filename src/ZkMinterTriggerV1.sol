@@ -100,12 +100,12 @@ contract ZkMinterTriggerV1 is ZkMinterV1 {
     values = _values;
     RECOVERY_ADDRESS = _recoveryAddress;
 
-    for (uint256 i = 0; i < _approvals.length; i++) {
-      Approval memory approval = _approvals[i];
-      if (approval.token == address(0) || approval.spender == address(0)) {
-        revert ZkMinterTriggerV1__InvalidApproval(i, approval.token, approval.spender);
+    for (uint256 _i = 0; _i < _approvals.length; _i++) {
+      Approval memory _approval = _approvals[_i];
+      if (_approval.token == address(0) || _approval.spender == address(0)) {
+        revert ZkMinterTriggerV1__InvalidApproval(_i, _approval.token, _approval.spender);
       }
-      IERC20(approval.token).safeApprove(approval.spender, approval.amount);
+      IERC20(_approval.token).safeApprove(_approval.spender, _approval.amount);
     }
   }
 

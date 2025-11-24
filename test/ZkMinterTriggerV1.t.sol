@@ -211,25 +211,27 @@ contract Constructor is ZkMinterTriggerV1Test {
   }
 
   function test_RevertIf_ApprovalHasAddressZeroToken(address _spender) public {
-    ZkMinterTriggerV1.Approval[] memory approvals = new ZkMinterTriggerV1.Approval[](1);
-    approvals[0] = ZkMinterTriggerV1.Approval({token: address(0), spender: _spender, amount: 1});
+    ZkMinterTriggerV1.Approval[] memory _approvals = new ZkMinterTriggerV1.Approval[](1);
+    _approvals[0] = ZkMinterTriggerV1.Approval({token: address(0), spender: _spender, amount: 1});
 
     vm.expectRevert(
       abi.encodeWithSelector(ZkMinterTriggerV1.ZkMinterTriggerV1__InvalidApproval.selector, 0, address(0), _spender)
     );
-    new ZkMinterTriggerV1(mintable, admin, targets, calldatas, values, recoveryAddress, approvals);
+    new ZkMinterTriggerV1(mintable, admin, targets, calldatas, values, recoveryAddress, _approvals);
   }
 
   function test_RevertIf_ApprovalHasAddressZeroSpender() public {
-    address tokenAddress = address(token);
+    address _tokenAddress = address(token);
 
-    ZkMinterTriggerV1.Approval[] memory approvals = new ZkMinterTriggerV1.Approval[](1);
-    approvals[0] = ZkMinterTriggerV1.Approval({token: tokenAddress, spender: address(0), amount: 1});
+    ZkMinterTriggerV1.Approval[] memory _approvals = new ZkMinterTriggerV1.Approval[](1);
+    _approvals[0] = ZkMinterTriggerV1.Approval({token: _tokenAddress, spender: address(0), amount: 1});
 
     vm.expectRevert(
-      abi.encodeWithSelector(ZkMinterTriggerV1.ZkMinterTriggerV1__InvalidApproval.selector, 0, tokenAddress, address(0))
+      abi.encodeWithSelector(
+        ZkMinterTriggerV1.ZkMinterTriggerV1__InvalidApproval.selector, 0, _tokenAddress, address(0)
+      )
     );
-    new ZkMinterTriggerV1(mintable, admin, targets, calldatas, values, recoveryAddress, approvals);
+    new ZkMinterTriggerV1(mintable, admin, targets, calldatas, values, recoveryAddress, _approvals);
   }
 }
 
@@ -338,15 +340,15 @@ contract Trigger is ZkMinterTriggerV1Test {
   function testFuzz_ExecutesMultipleTriggers(uint256 _value1, uint256 _value2) public {
     _value1 = _boundToRealisticAmount(_value1);
     _value2 = _boundToRealisticAmount(_value2);
-    MockTargetContract secondTarget = new MockTargetContract();
+    MockTargetContract _secondTarget = new MockTargetContract();
 
     address[] memory _targets = new address[](2);
     _targets[0] = address(mockTarget);
-    _targets[1] = address(secondTarget);
+    _targets[1] = address(_secondTarget);
 
     bytes[] memory _calldatas = new bytes[](2);
     _calldatas[0] = abi.encodeWithSelector(mockTarget.setValue.selector, 42);
-    _calldatas[1] = abi.encodeWithSelector(secondTarget.setValue.selector, 100);
+    _calldatas[1] = abi.encodeWithSelector(_secondTarget.setValue.selector, 100);
 
     uint256[] memory _values = new uint256[](2);
     _values[0] = _value1;
@@ -354,20 +356,20 @@ contract Trigger is ZkMinterTriggerV1Test {
 
     vm.deal(address(caller), _value1 + _value2);
 
-    ZkMinterTriggerV1 multiTrigger =
+    ZkMinterTriggerV1 _multiTrigger =
       new ZkMinterTriggerV1(mintable, admin, _targets, _calldatas, _values, recoveryAddress, _emptyApprovals());
 
     vm.prank(admin);
-    multiTrigger.grantRole(MINTER_ROLE, caller);
+    _multiTrigger.grantRole(MINTER_ROLE, caller);
 
     vm.deal(caller, _value1 + _value2);
     vm.prank(caller);
-    multiTrigger.trigger{value: _value1 + _value2}();
+    _multiTrigger.trigger{value: _value1 + _value2}();
 
     assertEq(mockTarget.value(), 42);
     assertEq(mockTarget.called(), true);
-    assertEq(secondTarget.value(), 100);
-    assertEq(secondTarget.called(), true);
+    assertEq(_secondTarget.value(), 100);
+    assertEq(_secondTarget.called(), true);
   }
 
   function testFuzz_RevertIf_TriggerAfterContractIsPaused(address _caller) public {
@@ -406,17 +408,17 @@ contract Trigger is ZkMinterTriggerV1Test {
     uint256[] memory _values = new uint256[](1);
     _values[0] = 100 ether;
 
-    ZkMinterTriggerV1 failTrigger =
+    ZkMinterTriggerV1 _failTrigger =
       new ZkMinterTriggerV1(mintable, admin, _targets, _calldatas, _values, recoveryAddress, _emptyApprovals());
 
     vm.prank(admin);
-    failTrigger.grantRole(MINTER_ROLE, caller);
+    _failTrigger.grantRole(MINTER_ROLE, caller);
 
     vm.expectRevert(
       abi.encodeWithSelector(ZkMinterTriggerV1.ZkMinterTriggerV1__TriggerCallFailed.selector, 0, address(mockTarget))
     );
     vm.prank(caller);
-    failTrigger.trigger();
+    _failTrigger.trigger();
   }
 
   function testFuzz_RevertIf_TargetHasNoCode(address _noCodeTarget, address _caller) public {
@@ -549,20 +551,20 @@ contract MintAndTrigger is ZkMinterTriggerV1Test {
     uint256[] memory _values = new uint256[](1);
     _values[0] = _ethValue;
 
-    ZkMinterTriggerV1 failTrigger =
+    ZkMinterTriggerV1 _failTrigger =
       new ZkMinterTriggerV1(mintable, admin, _targets, _calldatas, _values, recoveryAddress, _emptyApprovals());
 
-    // Allow failTrigger to mint on the underlying cappedMinter and grant a caller minter role.
-    _grantMinterRole(cappedMinter, cappedMinterAdmin, address(failTrigger));
+    // Allow _failTrigger to mint on the underlying cappedMinter and grant a caller minter role.
+    _grantMinterRole(cappedMinter, cappedMinterAdmin, address(_failTrigger));
     vm.prank(admin);
-    failTrigger.grantRole(MINTER_ROLE, _caller);
+    _failTrigger.grantRole(MINTER_ROLE, _caller);
 
     vm.deal(_caller, _ethValue);
     vm.expectRevert(
       abi.encodeWithSelector(ZkMinterTriggerV1.ZkMinterTriggerV1__TriggerCallFailed.selector, 0, address(mockTarget))
     );
     vm.prank(_caller);
-    failTrigger.mintAndTrigger{value: _ethValue}(address(failTrigger), _amount);
+    _failTrigger.mintAndTrigger{value: _ethValue}(address(_failTrigger), _amount);
   }
 
   function testFuzz_RevertIf_TargetHasNoCode(
@@ -622,27 +624,27 @@ contract MintAndTrigger is ZkMinterTriggerV1Test {
     _values[0] = 0;
     _values[1] = _ethValue;
 
-    ZkMinterTriggerV1 multiTrigger =
+    ZkMinterTriggerV1 _multiTrigger =
       new ZkMinterTriggerV1(mintable, admin, _targets, _calldatas, _values, recoveryAddress, _emptyApprovals());
 
     // Set up role.
-    _grantMinterRole(cappedMinter, cappedMinterAdmin, address(multiTrigger));
+    _grantMinterRole(cappedMinter, cappedMinterAdmin, address(_multiTrigger));
     vm.prank(admin);
-    multiTrigger.grantRole(MINTER_ROLE, _caller);
+    _multiTrigger.grantRole(MINTER_ROLE, _caller);
 
     // Execute mint and trigger.
     vm.deal(_caller, _ethValue);
     vm.prank(_caller);
-    multiTrigger.mintAndTrigger{value: _ethValue}(address(multiTrigger), _amount);
+    _multiTrigger.mintAndTrigger{value: _ethValue}(address(_multiTrigger), _amount);
 
     // Verify call and ETH transfer.
     assertEq(mockTarget.value(), _setValue);
     assertEq(mockTarget.called(), true);
-    assertEq(mockTarget.lastCaller(), address(multiTrigger));
+    assertEq(mockTarget.lastCaller(), address(_multiTrigger));
     assertEq(address(mockTarget).balance, _ethValue);
 
     // Verify token transfer from trigger to recipient.
-    assertEq(token.balanceOf(address(multiTrigger)), 0);
+    assertEq(token.balanceOf(address(_multiTrigger)), 0);
     assertEq(token.balanceOf(_recipient), _initialRecipientBalance + _amount);
   }
 }
