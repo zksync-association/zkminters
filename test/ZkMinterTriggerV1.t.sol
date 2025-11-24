@@ -227,9 +227,7 @@ contract Constructor is ZkMinterTriggerV1Test {
     approvals[0] = ZkMinterTriggerV1.Approval({token: tokenAddress, spender: address(0), amount: 1});
 
     vm.expectRevert(
-      abi.encodeWithSelector(
-        ZkMinterTriggerV1.ZkMinterTriggerV1__InvalidApproval.selector, 0, tokenAddress, address(0)
-      )
+      abi.encodeWithSelector(ZkMinterTriggerV1.ZkMinterTriggerV1__InvalidApproval.selector, 0, tokenAddress, address(0))
     );
     new ZkMinterTriggerV1(mintable, admin, targets, calldatas, values, recoveryAddress, approvals);
   }

@@ -238,7 +238,9 @@ contract CreateMinter is ZkMinterTriggerV1FactoryTest {
         ZkMinterTriggerV1.ZkMinterTriggerV1__InvalidApproval.selector, 0, address(0), address(0xBEEF)
       )
     );
-    factory.createMinter(IMintable(address(0x1234)), address(0x1), targets, calldatas, values, address(0x2), approvals, 1);
+    factory.createMinter(
+      IMintable(address(0x1234)), address(0x1), targets, calldatas, values, address(0x2), approvals, 1
+    );
   }
 
   function test_RevertIf_CreatingMinterWithZeroSpenderApproval() public {
@@ -253,7 +255,9 @@ contract CreateMinter is ZkMinterTriggerV1FactoryTest {
         ZkMinterTriggerV1.ZkMinterTriggerV1__InvalidApproval.selector, 0, address(0xCAFE), address(0)
       )
     );
-    factory.createMinter(IMintable(address(0x1234)), address(0x1), targets, calldatas, values, address(0x2), approvals, 1);
+    factory.createMinter(
+      IMintable(address(0x1234)), address(0x1), targets, calldatas, values, address(0x2), approvals, 1
+    );
   }
 }
 
