@@ -5,6 +5,7 @@ import {ZkMinterTriggerV1} from "src/ZkMinterTriggerV1.sol";
 import {ZkMinterV1} from "src/ZkMinterV1.sol";
 import {IMintable} from "src/interfaces/IMintable.sol";
 import {MockTargetContract} from "test/helpers/MockTargetContract.sol";
+import {MockRevertingRecoveryAddress} from "test/helpers/MockRevertingRecoveryAddress.sol";
 import {ZkBaseTest} from "test/helpers/ZkBaseTest.t.sol";
 
 contract ZkMinterTriggerV1Test is ZkBaseTest {
@@ -46,7 +47,7 @@ contract ZkMinterTriggerV1Test is ZkBaseTest {
     _grantMinterRole(cappedMinter, cappedMinterAdmin, _minter);
   }
 
-  function _boundTriggerValue(uint256 _value) internal returns (uint256) {
+  function _boundTriggerValue(uint256 _value) internal pure returns (uint256) {
     return bound(_value, 1e18, 10_000_000e18);
   }
 
@@ -609,6 +610,24 @@ contract RecoverTokens is ZkMinterTriggerV1Test {
     vm.prank(_nonAdmin);
     vm.expectRevert(_formatAccessControlError(_nonAdmin, DEFAULT_ADMIN_ROLE));
     minterTrigger.recoverTokens(ETH, _amount);
+  }
+
+  function testFuzz_RevertIf_RecoveryEthTransferFails(uint256 _amount) public {
+    _amount = _boundToRealisticAmount(_amount);
+    MockRevertingRecoveryAddress recovery = new MockRevertingRecoveryAddress();
+
+    address[] memory _targets = new address[](0);
+    bytes[] memory _calldatas = new bytes[](0);
+    uint256[] memory _values = new uint256[](0);
+
+    ZkMinterTriggerV1 failRecoveryTrigger =
+      new ZkMinterTriggerV1(mintable, admin, _targets, _calldatas, _values, address(recovery));
+
+    vm.deal(address(failRecoveryTrigger), _amount);
+
+    vm.expectRevert(ZkMinterTriggerV1.ZkMinterTriggerV1__RecoveryEthTransferFailed.selector);
+    vm.prank(admin);
+    failRecoveryTrigger.recoverTokens(ETH, _amount);
   }
 
   function testFuzz_CanRecoverTokensAfterPaused(address _minter, uint256 _amount) public {
