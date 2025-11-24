@@ -28,6 +28,13 @@ contract ZkMinterTriggerV1 is ZkMinterV1 {
   /// @notice The immutable address where tokens are sent when recovered.
   address public immutable RECOVERY_ADDRESS;
 
+  /// @notice Struct describing an ERC20 approval that should be configured during construction.
+  struct Approval {
+    address token;
+    address spender;
+    uint256 amount;
+  }
+
   /// @notice Emitted when trigger is executed.
   event TriggerExecuted(address indexed caller);
 
@@ -52,8 +59,8 @@ contract ZkMinterTriggerV1 is ZkMinterV1 {
   /// @notice Error for when the recovery address is the zero address.
   error ZkMinterTriggerV1__InvalidRecoveryAddress();
 
-  /// @notice Error for when the ETH transfer to the recovery address fails.
-  error ZkMinterTriggerV1__RecoveryEthTransferFailed();
+  /// @notice Error for when an approval contains invalid data.
+  error ZkMinterTriggerV1__InvalidApproval(uint256 index, address token, address spender);
 
   /// @notice Initializes the trigger contract with mintable, admin, and trigger parameters.
   /// @param _mintable A contract used as a target when calling mint.
@@ -62,13 +69,15 @@ contract ZkMinterTriggerV1 is ZkMinterV1 {
   /// @param _calldatas The call data for the functions.
   /// @param _values The ETH values to send with the calls.
   /// @param _recoveryAddress The immutable address where minted tokens can be sent.
+  /// @param _approvals Optional approvals to configure for downstream spenders.
   constructor(
     IMintable _mintable,
     address _admin,
     address[] memory _targetAddresses,
     bytes[] memory _calldatas,
     uint256[] memory _values,
-    address _recoveryAddress
+    address _recoveryAddress,
+    Approval[] memory _approvals
   ) {
     if (_admin == address(0)) {
       revert ZkMinterTriggerV1__InvalidAdmin();
@@ -90,6 +99,14 @@ contract ZkMinterTriggerV1 is ZkMinterV1 {
     calldatas = _calldatas;
     values = _values;
     RECOVERY_ADDRESS = _recoveryAddress;
+
+    for (uint256 i = 0; i < _approvals.length; i++) {
+      Approval memory approval = _approvals[i];
+      if (approval.token == address(0) || approval.spender == address(0)) {
+        revert ZkMinterTriggerV1__InvalidApproval(i, approval.token, approval.spender);
+      }
+      IERC20(approval.token).safeApprove(approval.spender, approval.amount);
+    }
   }
 
   /// @notice Mints tokens to this contract address.

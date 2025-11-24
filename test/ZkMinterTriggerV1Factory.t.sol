@@ -44,6 +44,10 @@ contract ZkMinterTriggerV1FactoryTest is Test {
 
     return (targets, calldatas, values);
   }
+
+  function _buildEmptyApprovals() internal pure returns (ZkMinterTriggerV1.Approval[] memory approvals) {
+    approvals = new ZkMinterTriggerV1.Approval[](0);
+  }
 }
 
 contract CreateMinter is ZkMinterTriggerV1FactoryTest {
@@ -61,7 +65,10 @@ contract CreateMinter is ZkMinterTriggerV1FactoryTest {
     (address[] memory targets, bytes[] memory calldatas, uint256[] memory values) =
       _buildSingleTriggerParams(_target, _calldata, _value);
 
-    address minterAddress = factory.createMinter(_mintable, _admin, targets, calldatas, values, _recovery, _saltNonce);
+    ZkMinterTriggerV1.Approval[] memory approvals = _buildEmptyApprovals();
+
+    address minterAddress =
+      factory.createMinter(_mintable, _admin, targets, calldatas, values, _recovery, approvals, _saltNonce);
 
     ZkMinterTriggerV1 minter = ZkMinterTriggerV1(payable(minterAddress));
 
@@ -88,14 +95,17 @@ contract CreateMinter is ZkMinterTriggerV1FactoryTest {
     (address[] memory targets, bytes[] memory calldatas, uint256[] memory values) =
       _buildSingleTriggerParams(_target, _calldata, _value);
 
-    address expectedAddress = factory.getMinter(_mintable, _admin, targets, calldatas, values, _recovery, _saltNonce);
+    ZkMinterTriggerV1.Approval[] memory approvals = _buildEmptyApprovals();
+
+    address expectedAddress =
+      factory.getMinter(_mintable, _admin, targets, calldatas, values, _recovery, approvals, _saltNonce);
 
     vm.expectEmit();
     emit ZkMinterTriggerV1Factory.MinterTriggerCreated(
-      expectedAddress, _mintable, _admin, targets, calldatas, values, _recovery
+      expectedAddress, _mintable, _admin, targets, calldatas, values, _recovery, approvals
     );
 
-    factory.createMinter(_mintable, _admin, targets, calldatas, values, _recovery, _saltNonce);
+    factory.createMinter(_mintable, _admin, targets, calldatas, values, _recovery, approvals, _saltNonce);
   }
 
   function testFuzz_CreatesNewMinterTriggerWithBytesArgs(
@@ -112,8 +122,10 @@ contract CreateMinter is ZkMinterTriggerV1FactoryTest {
     (address[] memory targets, bytes[] memory calldatas, uint256[] memory values) =
       _buildSingleTriggerParams(_target, _calldata, _value);
 
+    ZkMinterTriggerV1.Approval[] memory approvals = _buildEmptyApprovals();
+
     address minterAddress =
-      factory.createMinter(_mintable, abi.encode(_admin, targets, calldatas, values, _recovery, _saltNonce));
+      factory.createMinter(_mintable, abi.encode(_admin, targets, calldatas, values, _recovery, approvals, _saltNonce));
 
     ZkMinterTriggerV1 minter = ZkMinterTriggerV1(payable(minterAddress));
 
@@ -140,14 +152,17 @@ contract CreateMinter is ZkMinterTriggerV1FactoryTest {
     (address[] memory targets, bytes[] memory calldatas, uint256[] memory values) =
       _buildSingleTriggerParams(_target, _calldata, _value);
 
-    address expectedAddress = factory.getMinter(_mintable, _admin, targets, calldatas, values, _recovery, _saltNonce);
+    ZkMinterTriggerV1.Approval[] memory approvals = _buildEmptyApprovals();
+
+    address expectedAddress =
+      factory.getMinter(_mintable, _admin, targets, calldatas, values, _recovery, approvals, _saltNonce);
 
     vm.expectEmit();
     emit ZkMinterTriggerV1Factory.MinterTriggerCreated(
-      expectedAddress, _mintable, _admin, targets, calldatas, values, _recovery
+      expectedAddress, _mintable, _admin, targets, calldatas, values, _recovery, approvals
     );
 
-    factory.createMinter(_mintable, abi.encode(_admin, targets, calldatas, values, _recovery, _saltNonce));
+    factory.createMinter(_mintable, abi.encode(_admin, targets, calldatas, values, _recovery, approvals, _saltNonce));
   }
 
   function testFuzz_RevertIf_CreatingDuplicateMinter(
@@ -164,10 +179,12 @@ contract CreateMinter is ZkMinterTriggerV1FactoryTest {
     (address[] memory targets, bytes[] memory calldatas, uint256[] memory values) =
       _buildSingleTriggerParams(_target, _calldata, _value);
 
-    factory.createMinter(_mintable, _admin, targets, calldatas, values, _recovery, _saltNonce);
+    ZkMinterTriggerV1.Approval[] memory approvals = _buildEmptyApprovals();
+
+    factory.createMinter(_mintable, _admin, targets, calldatas, values, _recovery, approvals, _saltNonce);
 
     vm.expectRevert(abi.encodeWithSelector(HashIsNonZero.selector, bytecodeHash));
-    factory.createMinter(_mintable, _admin, targets, calldatas, values, _recovery, _saltNonce);
+    factory.createMinter(_mintable, _admin, targets, calldatas, values, _recovery, approvals, _saltNonce);
   }
 
   function test_RevertIf_ArrayLengthMismatch() public {
@@ -181,29 +198,67 @@ contract CreateMinter is ZkMinterTriggerV1FactoryTest {
     uint256[] memory values = new uint256[](1);
     values[0] = 1 ether;
 
+    ZkMinterTriggerV1.Approval[] memory approvals = _buildEmptyApprovals();
+
     vm.expectRevert(ZkMinterTriggerV1.ZkMinterTriggerV1__ArrayLengthMismatch.selector);
-    factory.createMinter(IMintable(address(0x1234)), address(0x1), targets, calldatas, values, address(0x2), 1);
+    factory.createMinter(
+      IMintable(address(0x1234)), address(0x1), targets, calldatas, values, address(0x2), approvals, 1
+    );
   }
 
   function test_RevertIf_CreatingMinterWithZeroAdmin() public {
     (address[] memory targets, bytes[] memory calldatas, uint256[] memory values) =
       _buildSingleTriggerParams(address(0x1), hex"", 0);
 
+    ZkMinterTriggerV1.Approval[] memory approvals = _buildEmptyApprovals();
+
     vm.expectRevert(ZkMinterTriggerV1.ZkMinterTriggerV1__InvalidAdmin.selector);
-    factory.createMinter(IMintable(address(0x1234)), address(0), targets, calldatas, values, address(0x2), 1);
+    factory.createMinter(IMintable(address(0x1234)), address(0), targets, calldatas, values, address(0x2), approvals, 1);
   }
 
   function test_RevertIf_CreatingMinterWithZeroRecovery() public {
     (address[] memory targets, bytes[] memory calldatas, uint256[] memory values) =
       _buildSingleTriggerParams(address(0x1), hex"", 0);
 
+    ZkMinterTriggerV1.Approval[] memory approvals = _buildEmptyApprovals();
+
     vm.expectRevert(ZkMinterTriggerV1.ZkMinterTriggerV1__InvalidRecoveryAddress.selector);
-    factory.createMinter(IMintable(address(0x1234)), address(0x1), targets, calldatas, values, address(0), 1);
+    factory.createMinter(IMintable(address(0x1234)), address(0x1), targets, calldatas, values, address(0), approvals, 1);
+  }
+
+  function test_RevertIf_CreatingMinterWithZeroTokenApproval() public {
+    (address[] memory targets, bytes[] memory calldatas, uint256[] memory values) =
+      _buildSingleTriggerParams(address(0x1), hex"", 0);
+
+    ZkMinterTriggerV1.Approval[] memory approvals = new ZkMinterTriggerV1.Approval[](1);
+    approvals[0] = ZkMinterTriggerV1.Approval({token: address(0), spender: address(0xBEEF), amount: 1});
+
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        ZkMinterTriggerV1.ZkMinterTriggerV1__InvalidApproval.selector, 0, address(0), address(0xBEEF)
+      )
+    );
+    factory.createMinter(IMintable(address(0x1234)), address(0x1), targets, calldatas, values, address(0x2), approvals, 1);
+  }
+
+  function test_RevertIf_CreatingMinterWithZeroSpenderApproval() public {
+    (address[] memory targets, bytes[] memory calldatas, uint256[] memory values) =
+      _buildSingleTriggerParams(address(0x1), hex"", 0);
+
+    ZkMinterTriggerV1.Approval[] memory approvals = new ZkMinterTriggerV1.Approval[](1);
+    approvals[0] = ZkMinterTriggerV1.Approval({token: address(0xCAFE), spender: address(0), amount: 1});
+
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        ZkMinterTriggerV1.ZkMinterTriggerV1__InvalidApproval.selector, 0, address(0xCAFE), address(0)
+      )
+    );
+    factory.createMinter(IMintable(address(0x1234)), address(0x1), targets, calldatas, values, address(0x2), approvals, 1);
   }
 }
 
 contract GetMinter is ZkMinterTriggerV1FactoryTest {
-  function testFuzz_ReturnsCorrectMinterAddress(
+  function testFuzz_ReturnsCorrectTriggerMinterAddress(
     IMintable _mintable,
     address _admin,
     address _target,
@@ -217,9 +272,13 @@ contract GetMinter is ZkMinterTriggerV1FactoryTest {
     (address[] memory targets, bytes[] memory calldatas, uint256[] memory values) =
       _buildSingleTriggerParams(_target, _calldata, _value);
 
-    address expected = factory.getMinter(_mintable, _admin, targets, calldatas, values, _recovery, _saltNonce);
+    ZkMinterTriggerV1.Approval[] memory approvals = _buildEmptyApprovals();
 
-    address deployed = factory.createMinter(_mintable, _admin, targets, calldatas, values, _recovery, _saltNonce);
+    address expected =
+      factory.getMinter(_mintable, _admin, targets, calldatas, values, _recovery, approvals, _saltNonce);
+
+    address deployed =
+      factory.createMinter(_mintable, _admin, targets, calldatas, values, _recovery, approvals, _saltNonce);
 
     assertEq(deployed, expected);
   }

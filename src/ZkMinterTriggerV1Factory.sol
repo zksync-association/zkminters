@@ -11,7 +11,8 @@ import {IMintable} from "src/interfaces/IMintable.sol";
 /// @notice Factory contract to deploy `ZkMinterTriggerV1` contracts using CREATE2. This factory enables
 /// deterministic deployment of trigger-based minter contracts with predictable addresses. The factory offers two
 /// deployment interfaces:
-/// - `createMinter(IMintable,address,address[],bytes[],uint256[],address,uint256)` for strongly typed params
+/// - `createMinter(IMintable,address,address[],bytes[],uint256[],address,ZkMinterTriggerV1.Approval[],uint256)` for
+/// strongly typed params
 /// - `createMinter(IMintable,bytes)` for unified factory compatibility
 /// @custom:security-contact security@matterlabs.dev
 contract ZkMinterTriggerV1Factory is IZkMinterV1Factory {
@@ -34,6 +35,7 @@ contract ZkMinterTriggerV1Factory is IZkMinterV1Factory {
   /// @param calldatas Calldata forwarded to each target contract.
   /// @param values ETH values forwarded to each target contract.
   /// @param recovery The immutable recovery address for the trigger.
+  /// @param approvals Optional approvals configured during construction.
   event MinterTriggerCreated(
     address indexed minterTrigger,
     IMintable mintable,
@@ -41,7 +43,8 @@ contract ZkMinterTriggerV1Factory is IZkMinterV1Factory {
     address[] targets,
     bytes[] calldatas,
     uint256[] values,
-    address recovery
+    address recovery,
+    ZkMinterTriggerV1.Approval[] approvals
   );
 
   /* ///////////////////////////////////////////////////////////////
@@ -65,6 +68,7 @@ contract ZkMinterTriggerV1Factory is IZkMinterV1Factory {
   /// @param _calldatas Calldata forwarded to each target contract.
   /// @param _values ETH values forwarded with each call.
   /// @param _recoveryAddress Immutable address that receives recovered funds.
+  /// @param _approvals Optional approvals configured during the trigger deployment.
   /// @param _saltNonce A user-provided nonce for salt calculation.
   /// @return _minterTriggerAddress The address of the newly deployed `ZkMinterTriggerV1`.
   function createMinter(
@@ -74,17 +78,19 @@ contract ZkMinterTriggerV1Factory is IZkMinterV1Factory {
     bytes[] memory _calldatas,
     uint256[] memory _values,
     address _recoveryAddress,
+    ZkMinterTriggerV1.Approval[] memory _approvals,
     uint256 _saltNonce
   ) external returns (address _minterTriggerAddress) {
-    _minterTriggerAddress =
-      _createMinter(_mintable, _admin, _targets, _calldatas, _values, _recoveryAddress, _saltNonce);
+    _minterTriggerAddress = _createMinter(
+      _mintable, _admin, _targets, _calldatas, _values, _recoveryAddress, _approvals, _saltNonce
+    );
   }
 
   /// @notice Deploys a new `ZkMinterTriggerV1` contract using `CREATE2`. This overload accepts encoded args so it can
   /// be composed inside higher level factories.
   /// @param _mintable A contract used as a target when calling mint.
   /// @param _args Encoded args: `(address admin, address[] targets, bytes[] calldatas, uint256[] values,
-  /// address recoveryAddress, uint256 saltNonce)`.
+  /// address recoveryAddress, ZkMinterTriggerV1.Approval[] approvals, uint256 saltNonce)`.
   /// @return The address of the newly deployed `ZkMinterTriggerV1`.
   function createMinter(IMintable _mintable, bytes memory _args) external returns (address) {
     (
@@ -93,10 +99,11 @@ contract ZkMinterTriggerV1Factory is IZkMinterV1Factory {
       bytes[] memory _calldatas,
       uint256[] memory _values,
       address _recoveryAddress,
+      ZkMinterTriggerV1.Approval[] memory _approvals,
       uint256 _saltNonce
-    ) = abi.decode(_args, (address, address[], bytes[], uint256[], address, uint256));
+    ) = abi.decode(_args, (address, address[], bytes[], uint256[], address, ZkMinterTriggerV1.Approval[], uint256));
 
-    return _createMinter(_mintable, _admin, _targets, _calldatas, _values, _recoveryAddress, _saltNonce);
+    return _createMinter(_mintable, _admin, _targets, _calldatas, _values, _recoveryAddress, _approvals, _saltNonce);
   }
 
   /// @notice Computes the address of a `ZkMinterTriggerV1` deployed via this factory.
@@ -106,6 +113,7 @@ contract ZkMinterTriggerV1Factory is IZkMinterV1Factory {
   /// @param _calldatas Calldata forwarded to each target contract.
   /// @param _values ETH values forwarded with each call.
   /// @param _recoveryAddress Immutable address that receives recovered funds.
+  /// @param _approvals Optional approvals configured during the trigger deployment.
   /// @param _saltNonce The nonce used for salt calculation.
   /// @return _minterTriggerAddress The address of the `ZkMinterTriggerV1`.
   function getMinter(
@@ -115,6 +123,7 @@ contract ZkMinterTriggerV1Factory is IZkMinterV1Factory {
     bytes[] memory _calldatas,
     uint256[] memory _values,
     address _recoveryAddress,
+    ZkMinterTriggerV1.Approval[] memory _approvals,
     uint256 _saltNonce
   ) external view returns (address _minterTriggerAddress) {
     bytes32 _salt = _calculateSalt(_saltNonce);
@@ -122,7 +131,7 @@ contract ZkMinterTriggerV1Factory is IZkMinterV1Factory {
       address(this),
       _salt,
       BYTECODE_HASH,
-      keccak256(abi.encode(_mintable, _admin, _targets, _calldatas, _values, _recoveryAddress))
+      keccak256(abi.encode(_mintable, _admin, _targets, _calldatas, _values, _recoveryAddress, _approvals))
     );
   }
 
@@ -144,6 +153,7 @@ contract ZkMinterTriggerV1Factory is IZkMinterV1Factory {
   /// @param _calldatas Calldata forwarded to each target contract.
   /// @param _values ETH values forwarded with each call.
   /// @param _recoveryAddress Immutable address that receives recovered funds.
+  /// @param _approvals Optional approvals configured during the trigger deployment.
   /// @param _saltNonce A user-provided nonce for salt calculation.
   /// @return _minterTriggerAddress The address of the newly deployed `ZkMinterTriggerV1`.
   function _createMinter(
@@ -153,14 +163,18 @@ contract ZkMinterTriggerV1Factory is IZkMinterV1Factory {
     bytes[] memory _calldatas,
     uint256[] memory _values,
     address _recoveryAddress,
+    ZkMinterTriggerV1.Approval[] memory _approvals,
     uint256 _saltNonce
   ) internal returns (address _minterTriggerAddress) {
     bytes32 _salt = _calculateSalt(_saltNonce);
 
-    ZkMinterTriggerV1 _instance =
-      new ZkMinterTriggerV1{salt: _salt}(_mintable, _admin, _targets, _calldatas, _values, _recoveryAddress);
+    ZkMinterTriggerV1 _instance = new ZkMinterTriggerV1{
+      salt: _salt
+    }(_mintable, _admin, _targets, _calldatas, _values, _recoveryAddress, _approvals);
     _minterTriggerAddress = address(_instance);
 
-    emit MinterTriggerCreated(_minterTriggerAddress, _mintable, _admin, _targets, _calldatas, _values, _recoveryAddress);
+    emit MinterTriggerCreated(
+      _minterTriggerAddress, _mintable, _admin, _targets, _calldatas, _values, _recoveryAddress, _approvals
+    );
   }
 }
