@@ -18,6 +18,18 @@ contract ZkCappedMinterV3Test is ZkBaseTest {
     );
     _grantMinterRoleToCappedMinter(address(cappedMinterV3));
   }
+
+  function _createACappedMinterV3(
+    IMintable _mintable,
+    address _admin,
+    uint256 _cap,
+    uint48 _startTime,
+    uint48 _expirationTime
+  ) internal returns (ZkCappedMinterV3) {
+    vm.assume(_admin != address(0));
+
+    return new ZkCappedMinterV3(_mintable, _admin, _cap, _startTime, _expirationTime);
+  }
 }
 
 contract Mint is ZkCappedMinterV3Test {
@@ -150,21 +162,22 @@ contract Mint is ZkCappedMinterV3Test {
     uint48 _startTime,
     uint48 _expirationTime
   ) public {
+    vm.assume(_receiver != address(0));
+
     _parentCap = bound(_parentCap, 2, DEFAULT_CAP);
     _childCap = bound(_childCap, 2, _parentCap);
     uint256 maxAmount = _childCap / 2;
     _amount1 = bound(_amount1, 1, maxAmount);
     _amount2 = bound(_amount2, 1, maxAmount);
-    vm.assume(_receiver != address(0));
 
     (_startTime, _expirationTime) = _boundToValidTimeControls(_startTime, _expirationTime);
     vm.warp(_startTime);
 
     ZkCappedMinterV3 parentMinter =
-      new ZkCappedMinterV3(IMintable(address(token)), _parentAdmin, _parentCap, _startTime, _expirationTime);
+      _createACappedMinterV3(IMintable(address(token)), _parentAdmin, _parentCap, _startTime, _expirationTime);
     _grantMinterRoleToCappedMinter(address(parentMinter));
     ZkCappedMinterV3 childMinter =
-      new ZkCappedMinterV3(IMintable(address(parentMinter)), _childAdmin, _childCap, _startTime, _expirationTime);
+      _createACappedMinterV3(IMintable(address(parentMinter)), _childAdmin, _childCap, _startTime, _expirationTime);
     _grantMinterRoleToCappedMinter(address(childMinter));
 
     vm.prank(_parentAdmin);
@@ -205,18 +218,16 @@ contract Mint is ZkCappedMinterV3Test {
     uint48 _expirationTime
   ) public {
     vm.assume(_receiver != address(0));
-
     _parentCap = bound(_parentCap, 1, DEFAULT_CAP);
     _amount = bound(_amount, 1, _parentCap);
-
     (_startTime, _expirationTime) = _boundToValidTimeControls(_startTime, _expirationTime);
     vm.warp(_startTime);
 
     ZkCappedMinterV3 parentMinter =
-      new ZkCappedMinterV3(IMintable(address(token)), _parentAdmin, _parentCap, _startTime, _expirationTime);
+      _createACappedMinterV3(IMintable(address(token)), _parentAdmin, _parentCap, _startTime, _expirationTime);
     _grantMinterRoleToCappedMinter(address(parentMinter));
     ZkCappedMinterV3 childMinter =
-      new ZkCappedMinterV3(IMintable(address(parentMinter)), _childAdmin, _childCap, _startTime, _expirationTime);
+      _createACappedMinterV3(IMintable(address(parentMinter)), _childAdmin, _childCap, _startTime, _expirationTime);
     _grantMinterRoleToCappedMinter(address(childMinter));
 
     vm.prank(_parentAdmin);
@@ -232,7 +243,6 @@ contract Mint is ZkCappedMinterV3Test {
   function testFuzz_RevertIf_ChildExceedsParentMintEvenThoughChildCapIsHigher(
     address _parentAdmin,
     address _childAdmin,
-    address _minter,
     address _receiver,
     uint256 _parentCap,
     uint256 _childCap,
@@ -243,19 +253,14 @@ contract Mint is ZkCappedMinterV3Test {
     _parentCap = bound(_parentCap, 2, MAX_MINT_SUPPLY - 1);
     _childCap = bound(_childCap, _parentCap + 1, MAX_MINT_SUPPLY);
     _amount = bound(_amount, _parentCap + 1, _childCap);
-
-    vm.assume(_parentAdmin != address(0));
-    vm.assume(_childAdmin != address(0));
-    vm.assume(_minter != address(0));
     vm.assume(_receiver != address(0));
-
     (_startTime, _expirationTime) = _boundToValidTimeControls(_startTime, _expirationTime);
     vm.warp(_startTime);
 
     ZkCappedMinterV3 parentMinter =
-      new ZkCappedMinterV3(IMintable(address(token)), _parentAdmin, _parentCap, _startTime, _expirationTime);
+      _createACappedMinterV3(IMintable(address(token)), _parentAdmin, _parentCap, _startTime, _expirationTime);
     ZkCappedMinterV3 childMinter =
-      new ZkCappedMinterV3(IMintable(address(parentMinter)), _childAdmin, _childCap, _startTime, _expirationTime);
+      _createACappedMinterV3(IMintable(address(parentMinter)), _childAdmin, _childCap, _startTime, _expirationTime);
 
     vm.prank(_parentAdmin);
     parentMinter.grantRole(MINTER_ROLE, address(childMinter));
@@ -382,6 +387,7 @@ contract SetMetadataURI is ZkCappedMinterV3Test {
   function testFuzz_InitialMetadataURIIsEmpty(address _admin, uint256 _cap, uint48 _startTime, uint48 _expirationTime)
     public
   {
+    vm.assume(_admin != address(0));
     (_startTime, _expirationTime) = _boundToValidTimeControls(_startTime, _expirationTime);
 
     ZkCappedMinterV3 v3 = new ZkCappedMinterV3(IMintable(address(token)), _admin, _cap, _startTime, _expirationTime);
@@ -436,6 +442,7 @@ contract Constructor is ZkCappedMinterV3Test {
     uint48 _startTime,
     uint48 _expirationTime
   ) public {
+    vm.assume(_admin != address(0));
     (_startTime, _expirationTime) = _boundToValidTimeControls(_startTime, _expirationTime);
     vm.warp(_startTime);
 
@@ -452,6 +459,7 @@ contract Constructor is ZkCappedMinterV3Test {
     uint48 _startTime,
     uint48 _invalidExpirationTime
   ) public {
+    vm.assume(_admin != address(0));
     _startTime = uint48(bound(_startTime, 1, type(uint48).max));
     _invalidExpirationTime = uint48(bound(_invalidExpirationTime, 0, _startTime - 1));
     vm.expectRevert(ZkCappedMinterV3.ZkCappedMinterV3__InvalidTime.selector);
@@ -461,6 +469,7 @@ contract Constructor is ZkCappedMinterV3Test {
   function testFuzz_RevertIf_StartTimeInPast(address _admin, uint256 _cap, uint48 _startTime, uint48 _expirationTime)
     public
   {
+    vm.assume(_admin != address(0));
     _startTime = uint48(bound(_startTime, 1, type(uint48).max));
     vm.warp(_startTime);
 
@@ -470,6 +479,13 @@ contract Constructor is ZkCappedMinterV3Test {
 
     vm.expectRevert(ZkCappedMinterV3.ZkCappedMinterV3__InvalidTime.selector);
     new ZkCappedMinterV3(IMintable(address(token)), _admin, _cap, _pastStartTime, _expirationTime);
+  }
+
+  function testFuzz_RevertIf_AdminIsZeroAddress(uint256 _cap, uint48 _startTime, uint48 _expirationTime) public {
+    (_startTime, _expirationTime) = _boundToValidTimeControls(_startTime, _expirationTime);
+
+    vm.expectRevert(ZkCappedMinterV3.ZkCappedMinterV3__InvalidAdmin.selector);
+    new ZkCappedMinterV3(IMintable(address(token)), address(0), _cap, _startTime, _expirationTime);
   }
 }
 
