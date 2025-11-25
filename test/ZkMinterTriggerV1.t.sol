@@ -543,6 +543,7 @@ contract MintAndTrigger is ZkMinterTriggerV1Test {
     _ethValue = _boundTriggerValue(_ethValue);
     _assumeSafeAddress(_caller);
     _assumeNoCodeTarget(_noCodeTarget);
+    vm.assume(_noCodeTarget != address(0));
 
     address[] memory _targets = new address[](1);
     _targets[0] = _noCodeTarget;
