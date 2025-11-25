@@ -432,7 +432,7 @@ contract Trigger is ZkMinterTriggerV1Test {
     uint256[] memory _values = new uint256[](1);
 
     ZkMinterTriggerV1 _noCodeTrigger =
-      new ZkMinterTriggerV1(mintable, admin, _targets, _calldatas, _values, recoveryAddress);
+      new ZkMinterTriggerV1(mintable, admin, _targets, _calldatas, _values, recoveryAddress, _emptyApprovals());
     vm.prank(admin);
     _noCodeTrigger.grantRole(MINTER_ROLE, _caller);
 
@@ -586,7 +586,7 @@ contract MintAndTrigger is ZkMinterTriggerV1Test {
     _values[0] = _ethValue;
 
     ZkMinterTriggerV1 _noCodeTrigger =
-      new ZkMinterTriggerV1(mintable, admin, _targets, _calldatas, _values, recoveryAddress);
+      new ZkMinterTriggerV1(mintable, admin, _targets, _calldatas, _values, recoveryAddress, _emptyApprovals());
     _grantMinterRole(cappedMinter, cappedMinterAdmin, address(_noCodeTrigger));
     vm.prank(admin);
     _noCodeTrigger.grantRole(MINTER_ROLE, _caller);
@@ -734,7 +734,7 @@ contract RecoverTokens is ZkMinterTriggerV1Test {
     uint256[] memory _values = new uint256[](0);
 
     ZkMinterTriggerV1 failRecoveryTrigger =
-      new ZkMinterTriggerV1(mintable, admin, _targets, _calldatas, _values, address(recovery));
+      new ZkMinterTriggerV1(mintable, admin, _targets, _calldatas, _values, address(recovery), _emptyApprovals());
 
     vm.deal(address(failRecoveryTrigger), _amount);
 

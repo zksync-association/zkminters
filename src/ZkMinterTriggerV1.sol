@@ -59,6 +59,9 @@ contract ZkMinterTriggerV1 is ZkMinterV1 {
   /// @notice Error for when the recovery address is the zero address.
   error ZkMinterTriggerV1__InvalidRecoveryAddress();
 
+  /// @notice Error for when the ETH transfer to the recovery address fails.
+  error ZkMinterTriggerV1__RecoveryEthTransferFailed();
+
   /// @notice Error for when an approval contains invalid data.
   error ZkMinterTriggerV1__InvalidApproval(uint256 index, address token, address spender);
 
