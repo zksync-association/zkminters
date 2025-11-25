@@ -85,7 +85,7 @@ contract CreateMinter is ZkMinterTriggerV1FactoryTest {
     uint256 _saltNonce
   ) public {
     _assumeValidAddresses(_admin, _recovery);
-	vm.assume(_target != address(0));
+    vm.assume(_target != address(0));
 
     (address[] memory targets, bytes[] memory calldatas, uint256[] memory values) =
       _buildSingleTriggerParams(_target, _calldata, _value);
@@ -110,7 +110,7 @@ contract CreateMinter is ZkMinterTriggerV1FactoryTest {
     uint256 _saltNonce
   ) public {
     _assumeValidAddresses(_admin, _recovery);
-	vm.assume(_target != address(0));
+    vm.assume(_target != address(0));
 
     (address[] memory targets, bytes[] memory calldatas, uint256[] memory values) =
       _buildSingleTriggerParams(_target, _calldata, _value);
@@ -139,7 +139,7 @@ contract CreateMinter is ZkMinterTriggerV1FactoryTest {
     uint256 _saltNonce
   ) public {
     _assumeValidAddresses(_admin, _recovery);
-	vm.assume(_target != address(0));
+    vm.assume(_target != address(0));
 
     (address[] memory targets, bytes[] memory calldatas, uint256[] memory values) =
       _buildSingleTriggerParams(_target, _calldata, _value);

@@ -50,12 +50,9 @@ contract ZkMinterDelayV1Integration is ZkBaseTest {
     vm.label(address(delayMinter), "DelayMinter");
   }
 
-  function testFuzz_ExecutesMintAfterDelayPeriod(
-    address _recipient,
-    uint256 _amount,
-    uint48 _delay,
-    uint256 _saltNonce
-  ) public {
+  function testFuzz_ExecutesMintAfterDelayPeriod(address _recipient, uint256 _amount, uint48 _delay, uint256 _saltNonce)
+    public
+  {
     _assumeSafeAddress(_recipient);
     _amount = _boundToRealisticAmount(_amount);
     _assumeSafeUint(_delay);
