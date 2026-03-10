@@ -37,7 +37,9 @@ deployments-zk/zkSyncLocal
 lcov.info
 
 # IDEs
-.vscode
 .idea
 
 node_modules/
+temp_auto_push.bat
+temp_interactive_push.bat
+.gitignore
